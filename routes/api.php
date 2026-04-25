@@ -1,4 +1,5 @@
 <?php
+
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\ResumeController;
 use Illuminate\Http\Request;

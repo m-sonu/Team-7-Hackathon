@@ -11,22 +11,26 @@ Required Fields:
 - "phone": (string) The candidate's contact phone number.
 - "email": (string) The candidate's email address.
 - "summary": (string) A brief professional summary or objective stated in the resume. If none is explicitly stated, write a 1-2 sentence summary based on their profile.
+- "work_experience": (array of objects) A list of the candidate's employment history. Each object should include:
+  - "company": (string) Name of the company.
+  - "role": (string) Job title or position.
+  - "start_date": (string) Start date (e.g., "MM/YYYY").
+  - "end_date": (string) End date (e.g., "MM/YYYY") or "Present".
+  - "responsibilities": (array of strings) A list of key responsibilities and achievements.
 - "projects": (array of objects) A list of projects the candidate has worked on. Each object should include:
-- "name": (string) Name of the project.
-- "description": (string) Brief description of the project.
-- "skills": (array of strings) A list of all skills mentioned (e.g., technical skills, soft skills, tools).
+  - "name": (string) Name of the project.
+  - "description": (string) Brief description of the project.
+- "skills": (array of strings) A comprehensive list of ALL skills mentioned across the resume (e.g., technical skills, soft skills, tools, programming languages). Ensure this is a top-level array.
 - "education": (object) Information about their education, broken down by:
-- "school": (string) Any general schooling mentioned below high school level (often omitted in professional resumes, return null if not found).
-- "highschool": (string) Name of the high school attended.
-- "graduation": (string) University/College degrees obtained, including the major and institution.
+  - "school": (string) Any general schooling mentioned below high school level (often omitted, return null if not found).
+  - "highschool": (string) Name of the high school attended.
+  - "graduation": (string) University/College degrees obtained, including the major and institution.
 - "years_of_experience": (number) The total calculated years of professional experience based on the work history dates. If exact dates are missing, provide your best estimate or return null.
-- "other_summarized_data": (string) Any other significant information (e.g., certifications, awards, languages, or notable achievements) summarized concisely.
+- "hobbies_and_interests": (array of strings) A list of hobbies, interests, or extracurricular activities mentioned in the resume.
+- "certifications": (array of strings) A list of professional certifications, licenses, or courses completed by the candidate.
+- "other_summarized_data": (string) Any other significant information (e.g., awards, languages, or notable achievements) summarized concisely.
 
 **Output Constraints:**
 - Output ONLY valid JSON.
 - Do not include markdown formatting (like ```json) in your response, just the raw JSON object.
 - Ensure all keys match the exact names specified above.
-
-Here is the resume content to process:
-
-[INSERT RESUME TEXT OR ATTACH DOCUMENT HERE]
