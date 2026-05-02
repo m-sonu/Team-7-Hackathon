@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\API\AuthController;
-use App\Http\Controllers\API\SocialiteController;
 use App\Http\Controllers\Api\BillController;
+use App\Http\Controllers\API\SocialiteController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +19,8 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
+    Route::get('/bills/claimable-amount', [BillController::class, 'getClaimableAmount']);
+    Route::patch('/admin/claim-status', [BillController::class, 'bulkUpdateClaimStatus']);
     Route::apiResource('bills', BillController::class);
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
 });

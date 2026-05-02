@@ -3,52 +3,38 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BulkUpdateClaimStatusRequest;
 use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillStatusRequest;
 use App\Models\Bill;
-use App\Notifications\BillStatusUpdated;
+use App\Models\User;
+use App\Services\BillService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class BillController extends Controller
 {
+    public function __construct(protected BillService $billService) {}
+
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        //
+        $bills = $this->billService->getFilteredBills($request->all());
+
+        return response()->json([
+            'data' => $bills,
+        ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreBillRequest $request)
+    public function store(StoreBillRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-
-        $bill = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $request) {
-            $bill = \App\Models\Bill::create([
-                'user_id' => $request->user()?->id ?? 1,
-                'category_id' => $validated['category_id'] ?? null,
-                'amount' => $validated['amount'] ?? null,
-                'bill_number' => $validated['bill_number'] ?? null,
-                'status' => 'pending',
-                'image_path' => $validated['image_path'] ?? null,
-                'raw_text' => $validated['raw_text'] ?? null,
-            ]);
-
-            if (!empty($validated['items'])) {
-                foreach ($validated['items'] as $item) {
-                    $bill->items()->create($item);
-                }
-            }
-
-            if (!empty($validated['vendor_contact'])) {
-                $bill->vendorContact()->create($validated['vendor_contact']);
-            }
-
-            return $bill->load('items', 'vendorContact');
-        });
+        $user = $request->user() ?? User::find(1); // Default to user 1 if not authenticated (for testing)
+        $bill = $this->billService->createBill($user, $request->validated());
 
         return response()->json([
             'message' => 'Bill created successfully',
@@ -83,26 +69,47 @@ class BillController extends Controller
     /**
      * Update the status of the specified bill.
      */
-    public function changeStatus(UpdateBillStatusRequest $request, Bill $bill)
+    public function changeStatus(UpdateBillStatusRequest $request, Bill $bill): JsonResponse
     {
-        $validated = $request->validated();
-        
-        $bill->update([
-            'status' => $validated['status']
-        ]);
-
-        $notification = new BillStatusUpdated($bill);
-
-        if ($bill->user) {
-            $bill->user->notify($notification);
-        }
-
-        $admins = \App\Models\User::where('role', 'admin')->get();
-        \Illuminate\Support\Facades\Notification::send($admins, $notification);
+        $bill = $this->billService->changeBillStatus($bill, $request->status);
 
         return response()->json([
             'message' => 'Bill status updated successfully',
-            'data' => $bill
+            'data' => $bill,
+        ]);
+    }
+
+    /**
+     * Calculate the total claimable amount for a user.
+     */
+    public function getClaimableAmount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($request->has('user_id') && $user->role === 'admin') {
+            $user = User::findOrFail($request->user_id);
+        }
+
+        $data = $this->billService->calculateAndEmailClaimableAmount($user);
+
+        return response()->json($data);
+    }
+
+    /**
+     * Bulk update claim status for multiple bill items (Admin only)
+     */
+    public function bulkUpdateClaimStatus(BulkUpdateClaimStatusRequest $request): JsonResponse
+    {
+        $targetUser = $this->billService->bulkUpdateClaimStatus($request->items);
+
+        if ($targetUser) {
+            $data = $this->billService->calculateAndEmailClaimableAmount($targetUser);
+
+            return response()->json($data);
+        }
+
+        return response()->json([
+            'message' => 'Claim statuses updated successfully.',
         ]);
     }
 }
