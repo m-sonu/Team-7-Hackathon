@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\SocialiteController;
+use App\Http\Controllers\Api\BillController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -16,4 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    Route::apiResource('bills', BillController::class);
+    Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
 });
