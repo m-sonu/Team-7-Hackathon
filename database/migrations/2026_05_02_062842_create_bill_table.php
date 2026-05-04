@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->bigInteger('user_id');
             $table->integer('category_id')->nullable();
+            $table->string('bill_no')->nullable();
+            $table->string('vat_no')->nullable();
             $table->decimal('amount', 15, 2)->nullable();
             $table->decimal('approve_amount', 15, 2)->nullable();
             $table->string('status')->default('pending');
