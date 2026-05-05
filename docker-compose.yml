@@ -1,32 +1,101 @@
 services:
-    ai_project:
-        image: postgres:15
-        container_name: ai-project
-        environment:
-            POSTGRES_USER: root
-            POSTGRES_PASSWORD: secret
-            POSTGRES_DB: project
-        ports:
-            - "5002:5432"
-        volumes:
-            - ai_project_data:/var/lib/postgresql/data
-            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-        restart: unless-stopped
-    
-    ai_project_test:
-        image: postgres:15
-        container_name: ai-project-test
-        environment:
-            POSTGRES_USER: root
-            POSTGRES_PASSWORD: secret
-            POSTGRES_DB: project_test
-        ports:
-            - "5003:5432"
-        volumes:
-            - ai_project_test_data:/var/lib/postgresql/data
-            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-        restart: unless-stopped
+  laravel.test:
+    build:
+      context: ./docker/8.3
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: '${WWWGROUP:-1000}'
+    image: sail-8.3/app
+    environment:
+      WWWUSER: '${WWWUSER:-1000}'
+      LARAVEL_SAIL: 1
+      SUPERVISOR_PHP_USER: 'sail'
+      SUPERVISOR_PHP_COMMAND: "/usr/bin/php -d variables_order=EGPCS /var/www/html/artisan serve --host=0.0.0.0 --port=80"
+      XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '${APP_PORT:-80}:80'
+      - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+    volumes:
+      - '.:/var/www/html'
+    networks:
+      - sail
+    depends_on:
+      - pgsql
+      - redis
+      - ai-service
 
+  ai-service:
+    build:
+      context: ../doc-extract # Ensure this folder exists 1 level up!
+      dockerfile: Dockerfile
+    image: tanuki-ai-service
+    platform: linux/arm64 # Force native M5 speed
+    ports:
+      - '${FORWARD_AI_SERVICE_PORT:-8000}:8000'
+    volumes:
+      - '../doc-extract:/app'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - sail
+
+  pgsql:
+    image: 'postgres:15-alpine' # Alpine is smaller/faster for Hackathons
+    platform: linux/arm64
+    ports:
+      - '${FORWARD_DB_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: '${DB_USERNAME}'
+      POSTGRES_PASSWORD: '${DB_PASSWORD}'
+      POSTGRES_DB: '${DB_DATABASE}'
+    volumes:
+      - 'sail-pgsql:/var/lib/postgresql/data'
+      - './docker/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
+    networks:
+      - sail
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'pg_isready',
+          '-q',
+          '-d',
+          '${DB_DATABASE}',
+          '-U',
+          '${DB_USERNAME}',
+        ]
+      retries: 3
+      timeout: 5s
+
+  redis:
+    image: 'redis:alpine'
+    ports:
+      - '${FORWARD_REDIS_PORT}:6379'
+    volumes:
+      - 'sail-redis:/data'
+    networks:
+      - sail
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      retries: 3
+      timeout: 5s
+  mailpit:
+    image: 'axllent/mailpit:latest'
+    ports:
+      - '${FORWARD_MAILPIT_PORT}:1025'
+      - '${FORWARD_MAILPIT_DASHBOARD_PORT}:8025'
+    networks:
+      - sail
+networks:
+  sail:
+    driver: bridge
 volumes:
-    ai_project_data:
-    ai_project_test_data:
+  sail-pgsql:
+    driver: local
+  sail-redis:
+    driver: local
