@@ -46,4 +46,8 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'tanuki' => [
+        'ai_url' => env('TANUKI_AI_URL', 'http://localhost:8000/api/parse'),
+    ],
+
 ];

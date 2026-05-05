@@ -16,10 +16,13 @@ class Bill extends Model
     protected $fillable = [
         'user_id',
         'category_id',
+        'category_monthly_pivot_id',
+        'bill_no',
+        'vat_no',
         'amount',
         'approve_amount',
         'status',
-        'image_path',
+        'file_path',
         'raw_text',
     ];
 

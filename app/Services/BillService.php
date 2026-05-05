@@ -38,36 +38,6 @@ class BillService
     }
 
     /**
-     * Create a new bill with items and vendor contact.
-     */
-    public function createBill(User $user, array $data): Bill
-    {
-        return DB::transaction(function () use ($user, $data) {
-            $bill = Bill::create([
-                'user_id' => $user->id,
-                'category_id' => $data['category_id'] ?? null,
-                'amount' => $data['amount'] ?? null,
-                'bill_number' => $data['bill_number'] ?? null,
-                'status' => 'pending',
-                'image_path' => $data['image_path'] ?? null,
-                'raw_text' => $data['raw_text'] ?? null,
-            ]);
-
-            if (! empty($data['items'])) {
-                foreach ($data['items'] as $item) {
-                    $bill->items()->create($item);
-                }
-            }
-
-            if (! empty($data['vendor_contact'])) {
-                $bill->vendorContact()->create($data['vendor_contact']);
-            }
-
-            return $bill->load('items', 'vendorContact');
-        });
-    }
-
-    /**
      * Change the status of a bill.
      */
     public function changeBillStatus(Bill $bill, string $status): Bill

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Bill;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('bill', function (Blueprint $table) {
+        Schema::create(Bill::TABLE_NAME, function (Blueprint $table) {
             $table->id();
             $table->bigInteger('user_id');
             $table->integer('category_id')->nullable();
@@ -20,7 +21,7 @@ return new class extends Migration
             $table->decimal('amount', 15, 2)->nullable();
             $table->decimal('approve_amount', 15, 2)->nullable();
             $table->string('status')->default('pending');
-            $table->mediumText('image_path')->nullable();
+            $table->mediumText('file_path')->nullable();
             $table->text('raw_text')->nullable();
             $table->timestamps();
 
@@ -35,6 +36,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('bill');
+        Schema::dropIfExists(Bill::TABLE_NAME);
     }
 };

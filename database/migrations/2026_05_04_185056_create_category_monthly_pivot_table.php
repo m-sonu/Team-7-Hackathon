@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CategoryMonthlyPivot;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('category_monthly_pivot', function (Blueprint $table) {
+        Schema::create(CategoryMonthlyPivot::TABLE_NAME, function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('category_id')->constrained('category')->onDelete('cascade');
@@ -31,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('category_monthly_pivot');
+        Schema::dropIfExists(CategoryMonthlyPivot::TABLE_NAME);
     }
 };

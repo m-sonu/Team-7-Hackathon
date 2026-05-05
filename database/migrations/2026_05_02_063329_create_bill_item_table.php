@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\BillItem;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('bill_item', function (Blueprint $table) {
+        Schema::create(BillItem::TABLE_NAME, function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('bill_id');
             $table->string('name');
@@ -31,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('bill_item');
+        Schema::dropIfExists(BillItem::TABLE_NAME);
     }
 };

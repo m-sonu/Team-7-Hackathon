@@ -23,20 +23,9 @@ class StoreBillRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_id' => 'nullable|integer|exists:category,id',
-            'amount' => 'nullable|numeric',
-            'bill_number' => 'nullable|string',
-            'image_path' => 'nullable|string',
-            'raw_text' => 'nullable|string',
-            'items' => 'nullable|array',
-            'items.*.name' => 'required_with:items|string',
-            'items.*.price' => 'nullable|numeric',
-            'items.*.is_claimable' => 'nullable|boolean',
-            'vendor_contact' => 'nullable|array',
-            'vendor_contact.company_name' => 'nullable|string',
-            'vendor_contact.phone' => 'nullable|string',
-            'vendor_contact.email' => 'nullable|email',
-            'vendor_contact.website' => 'nullable|string',
+            'category_id' => 'required|integer|exists:category,id',
+            'files' => 'required|array|min:1|max:3',
+            'files.*' => 'file|image|mimes:jpeg,png,jpg,webp|max:10240',
         ];
     }
 }

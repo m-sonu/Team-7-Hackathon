@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\DTOs\StoreBillDTO;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BulkUpdateClaimStatusRequest;
 use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillStatusRequest;
+use App\Jobs\ProcessBillAiJob;
 use App\Models\Bill;
 use App\Models\User;
 use App\Services\BillService;
@@ -28,18 +30,15 @@ class BillController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StoreBillRequest $request): JsonResponse
     {
-        $user = $request->user() ?? User::find(1); // Default to user 1 if not authenticated (for testing)
-        $bill = $this->billService->createBill($user, $request->validated());
+        $dto = StoreBillDTO::fromRequest($request);
+
+        ProcessBillAiJob::dispatch($dto);
 
         return response()->json([
-            'message' => 'Bill created successfully',
-            'data' => $bill,
-        ], 201);
+            'message' => 'Bills have been queued for AI processing.',
+        ], 202);
     }
 
     /**
