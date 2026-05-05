@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BillItem extends Model
 {
-    protected $table = 'bill_item';
+    public const TABLE_NAME = 'bill_item';
+
+    protected $table = self::TABLE_NAME;
 
     protected $fillable = [
         'bill_id',

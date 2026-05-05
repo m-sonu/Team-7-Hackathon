@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VendorContact extends Model
 {
-    protected $table = 'vendor_contact';
+    public const TABLE_NAME = 'vendor_contact';
+
+    protected $table = self::TABLE_NAME;
 
     protected $fillable = [
         'bill_id',

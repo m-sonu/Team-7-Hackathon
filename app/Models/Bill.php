@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Bill extends Model
 {
-    protected $table = 'bill';
+    public const TABLE_NAME = 'bill';
+
+    protected $table = self::TABLE_NAME;
 
     protected $fillable = [
         'user_id',

@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
-    protected $table = 'category';
+    public const TABLE_NAME = 'category';
+
+    protected $table = self::TABLE_NAME;
 
     protected $fillable = [
         'name',
@@ -23,5 +25,10 @@ class Category extends Model
     public function bills(): HasMany
     {
         return $this->hasMany(Bill::class);
+    }
+
+    public function monthlyPivots(): HasMany
+    {
+        return $this->hasMany(CategoryMonthlyPivot::class);
     }
 }

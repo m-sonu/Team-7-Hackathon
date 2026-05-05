@@ -2,14 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
+
+    public const TABLE_NAME = 'users';
+
+    protected $table = self::TABLE_NAME;
 
     protected $fillable = [
         'name',
@@ -35,8 +40,13 @@ class User extends Authenticatable
         ];
     }
 
-    public function bills(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function bills(): HasMany
     {
         return $this->hasMany(Bill::class);
+    }
+
+    public function categoryMonthlyPivots(): HasMany
+    {
+        return $this->hasMany(CategoryMonthlyPivot::class);
     }
 }
