@@ -15,13 +15,23 @@ class UserSeeder extends Seeder
             'email' => 'admin1@jobins.com',
             'password' => Hash::make('Admin@123#'),
             'role' => 'Admin',
-        ]);
-
-        User::create([
+        ],[
             'name' => 'Admin User two',
             'email' => 'admin2@jobins.com',
             'password' => Hash::make('Admin@123#'),
             'role' => 'Admin',
+        ],
+    [
+            'name' => 'Employee1',
+            'email' => 'employee1@jobins.com',
+            'password' => Hash::make('Admin@123#'),
+            'role' => 'Employee',
+        ],
+    [
+           'name' => 'Employee2',
+            'email' => 'employee2@jobins.com',
+            'password' => Hash::make('Admin@123#'),
+            'role' => 'Employee',
         ]);
     }
 }
