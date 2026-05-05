@@ -10,17 +10,19 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
-            'name' => 'Admin User one',
-            'email' => 'admin1@jobins.com',
-            'password' => Hash::make('Admin@123#'),
-            'role' => 'Admin',
-        ], [
-            'name' => 'Admin User two',
-            'email' => 'admin2@jobins.com',
-            'password' => Hash::make('Admin@123#'),
-            'role' => 'Admin',
-        ],
+        User::query()->insert([
+            [
+                'name' => 'Admin User one',
+                'email' => 'admin1@jobins.com',
+                'password' => Hash::make('Admin@123#'),
+                'role' => 'Admin',
+            ],
+            [
+                'name' => 'Admin User two',
+                'email' => 'admin2@jobins.com',
+                'password' => Hash::make('Admin@123#'),
+                'role' => 'Admin',
+            ],
             [
                 'name' => 'Employee1',
                 'email' => 'employee1@jobins.com',
@@ -32,6 +34,7 @@ class UserSeeder extends Seeder
                 'email' => 'employee2@jobins.com',
                 'password' => Hash::make('Admin@123#'),
                 'role' => 'Employee',
-            ]);
+            ]
+        ]);
     }
 }

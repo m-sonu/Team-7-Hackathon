@@ -9,7 +9,7 @@ class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        Category::create(
+        Category::query()->insert([
             [
                 'name' => 'System Usage Fees',
                 'monthly_limit' => 3000,
@@ -45,8 +45,7 @@ class CategorySeeder extends Seeder
                 'monthly_limit' => 3000,
                 'is_active' => true,
             ],
-
-        );
+        ]);
 
     }
 }
