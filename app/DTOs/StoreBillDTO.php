@@ -24,8 +24,9 @@ class StoreBillDTO
 
         $storedFiles = [];
         foreach ($files as $file) {
+            $path = $file->store('temp', 'local');
             $storedFiles[] = [
-                'path' => $file->store('bills'),
+                'path' => $path,
                 'original_name' => $file->getClientOriginalName(),
             ];
         }

@@ -21,7 +21,6 @@ return new class extends Migration
             $table->decimal('amount', 15, 2)->nullable();
             $table->decimal('approve_amount', 15, 2)->nullable();
             $table->string('status')->default('pending');
-            $table->mediumText('file_path')->nullable();
             $table->text('raw_text')->nullable();
             $table->timestamps();
 

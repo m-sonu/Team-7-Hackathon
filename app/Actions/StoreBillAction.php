@@ -40,9 +40,11 @@ class StoreBillAction
                 'user_id' => $user->id,
                 'category_id' => $categoryId,
                 'category_monthly_pivot_id' => $pivot->id,
-                'status' => 'pending',
-                'file_path' => $imagePath,
+                'status' => Bill::STATUS_PENDING,
             ]));
+
+            // Add media from storage
+            $bill->addMediaFromDisk($imagePath)->toMediaCollection('bills');
 
             // Bulk insert items
             if (! empty($aiDTO->billItems)) {

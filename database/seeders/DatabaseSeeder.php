@@ -11,7 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             CategorySeeder::class,
-            CategoryMonthlyPivotSeeder::class,
+            // CategoryMonthlyPivotSeeder::class,
         ]);
     }
 }

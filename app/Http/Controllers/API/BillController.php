@@ -111,4 +111,25 @@ class BillController extends Controller
             'message' => 'Claim statuses updated successfully.',
         ]);
     }
+
+    /**
+     * View the file associated with the bill.
+     */
+    public function viewFile(Request $request, Bill $bill): mixed
+    {
+        $user = $request->user();
+
+        // Check if user is owner or admin
+        if ($user->id !== $bill->user_id && $user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $media = $bill->getFirstMedia('bills');
+
+        if (! $media) {
+            return response()->json(['message' => 'File not found'], 404);
+        }
+
+        return response()->file($media->getPath());
+    }
 }

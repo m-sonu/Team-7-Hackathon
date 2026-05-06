@@ -28,8 +28,7 @@ class BillFactory extends Factory
             'approve_amount' => function (array $attributes) {
                 return $attributes['amount'];
             },
-            'status' => 'approved',
-            'file_path' => 'bills/fake.pdf',
+            'status' => Bill::STATUS_VERIFIED,
             'raw_text' => fake()->paragraph(),
             'category_monthly_pivot_id' => null, // Will be set in seeder
         ];

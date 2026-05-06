@@ -2,9 +2,8 @@
 
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\Api\BillController;
-use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\API\SocialiteController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -22,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/admin/claim-status', [BillController::class, 'bulkUpdateClaimStatus']);
     Route::apiResource('bills', BillController::class);
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
+    Route::get('/bills/{bill}/file', [BillController::class, 'viewFile']);
 
     Route::get('/users/{user}', [UserController::class, 'show']);
 });

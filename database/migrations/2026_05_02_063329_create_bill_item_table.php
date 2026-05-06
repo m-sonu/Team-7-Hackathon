@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('bill_id');
             $table->string('name');
             $table->decimal('price', 8, 2)->nullable();
-            $table->boolean('is_claimable')->default(true);
+            $table->boolean('is_claimable')->default(false);
             $table->mediumText('rejection_reason')->nullable();
             $table->timestamps();
 

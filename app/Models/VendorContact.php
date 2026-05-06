@@ -16,12 +16,10 @@ class VendorContact extends Model
 
     protected $fillable = [
         'bill_id',
-        'bill_number',
         'company_name',
         'phone',
         'email',
         'website',
-        'company_website',
     ];
 
     public function bill(): BelongsTo

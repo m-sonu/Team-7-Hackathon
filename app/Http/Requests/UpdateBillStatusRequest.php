@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Bill;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -23,7 +24,15 @@ class UpdateBillStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => 'required|string|in:pending,verified,rejected,paid',
+            'amount' => 'required|numeric',
+            'bill_no' => 'required|string',
+            'vat_no' => 'required|string',
+            'status' => 'required|string|in:'.implode(',', [
+                Bill::STATUS_PENDING,
+                Bill::STATUS_VERIFIED,
+                Bill::STATUS_REJECTED,
+                Bill::STATUS_PAID,
+            ]),
         ];
     }
 }
