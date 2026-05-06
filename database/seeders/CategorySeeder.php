@@ -46,6 +46,5 @@ class CategorySeeder extends Seeder
                 'is_active' => true,
             ],
         ]);
-
     }
 }

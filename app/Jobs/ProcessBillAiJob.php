@@ -25,6 +25,7 @@ class ProcessBillAiJob implements ShouldQueue
 
     /**
      * Execute the job.
+     *
      * @throws Throwable
      */
     public function handle(StoreBillAction $storeBillAction): void
@@ -36,7 +37,7 @@ class ProcessBillAiJob implements ShouldQueue
             try {
                 $fileContents = Storage::get($filePath);
 
-                $response = Http::attach(
+                $response = Http::timeout(300)->attach(
                     'file',
                     $fileContents,
                     $originalName
