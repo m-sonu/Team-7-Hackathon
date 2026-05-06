@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Bill;
+use App\Models\BillUploadBatch;
 use App\Models\Category;
 use App\Models\CategoryMonthlyPivot;
 use App\Models\User;
@@ -52,6 +53,17 @@ class CategoryMonthlyPivotSeeder extends Seeder
                         'last_updated_at' => now(),
                     ]);
 
+                    // Create a bill upload batch
+                    $batch = BillUploadBatch::create([
+                        'title' => "Bills for {$category->name} - {$monthYear}",
+                        'currency' => 'NRP',
+                        'user_id' => $user->id,
+                        'category_id' => $category->id,
+                        'category_monthly_pivot_id' => $pivot->id,
+                        'created_at' => $date,
+                        'updated_at' => $date,
+                    ]);
+
                     // Generate a random amount
                     $amount = rand(500, 5000);
 
@@ -60,6 +72,7 @@ class CategoryMonthlyPivotSeeder extends Seeder
                         'user_id' => $user->id,
                         'category_id' => $category->id,
                         'category_monthly_pivot_id' => $pivot->id,
+                        'bill_upload_batch_id' => $batch->id,
                         'amount' => $amount,
                         'approve_amount' => $amount,
                         'created_at' => $date,
