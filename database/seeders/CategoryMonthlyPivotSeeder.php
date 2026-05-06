@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Bill;
-use App\Models\BillItem;
 use App\Models\Category;
 use App\Models\CategoryMonthlyPivot;
 use App\Models\User;
@@ -53,32 +52,22 @@ class CategoryMonthlyPivotSeeder extends Seeder
                         'last_updated_at' => now(),
                     ]);
 
+                    // Generate a random amount
+                    $amount = rand(500, 5000);
+
                     // Create the bill
                     $bill = Bill::factory()->create([
                         'user_id' => $user->id,
                         'category_id' => $category->id,
                         'category_monthly_pivot_id' => $pivot->id,
+                        'amount' => $amount,
+                        'approve_amount' => $amount,
                         'created_at' => $date,
                         'updated_at' => $date,
-                    ]);
-
-                    // Create 2-3 bill items
-                    $itemsCount = rand(2, 3);
-                    $billItems = BillItem::factory()->count($itemsCount)->create([
-                        'bill_id' => $bill->id,
-                        'created_at' => $date,
-                        'updated_at' => $date,
-                    ]);
-
-                    // Update bill and pivot with total amount
-                    $totalAmount = $billItems->sum('price');
-                    $bill->update([
-                        'amount' => $totalAmount,
-                        'approve_amount' => $totalAmount,
                     ]);
 
                     $pivot->update([
-                        'total_spent' => $totalAmount,
+                        'total_spent' => $amount,
                     ]);
 
                     // Create vendor information

@@ -4,10 +4,8 @@ namespace App\Actions;
 
 use App\DTOs\AiParsedBillDTO;
 use App\Models\Bill;
-use App\Models\BillItem;
 use App\Models\CategoryMonthlyPivot;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -46,17 +44,6 @@ class StoreBillAction
             // Add media from storage
             $bill->addMediaFromDisk($imagePath)->toMediaCollection('bills');
 
-            // Bulk insert items
-            if (! empty($aiDTO->billItems)) {
-                $now = Carbon::now();
-                $items = array_map(fn ($item) => array_merge($item, [
-                    'bill_id' => $bill->id,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]), $aiDTO->billItems);
-
-                BillItem::query()->insert($items);
-            }
 
             // Create vendor contact
             if (! empty($aiDTO->vendorContact)) {
@@ -68,7 +55,7 @@ class StoreBillAction
             $pivot->increment('total_spent', $aiDTO->amount ?? 0);
             $pivot->update(['last_updated_at' => now()]);
 
-            return $bill->load('items', 'vendorContact');
+            return $bill->load('vendorContact');
         });
     }
 }

@@ -18,7 +18,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/{id}', [UserController::class, 'show']);
 
     Route::get('/bills/claimable-amount', [BillController::class, 'getClaimableAmount']);
-    Route::patch('/admin/claim-status', [BillController::class, 'bulkUpdateClaimStatus']);
     Route::apiResource('bills', BillController::class);
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
     Route::get('/bills/{bill}/file', [BillController::class, 'viewFile']);

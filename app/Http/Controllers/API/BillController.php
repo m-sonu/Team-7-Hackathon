@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\DTOs\StoreBillDTO;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\BulkUpdateClaimStatusRequest;
 use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillStatusRequest;
 use App\Jobs\ProcessBillAiJob;
@@ -94,23 +93,6 @@ class BillController extends Controller
         return response()->json($data);
     }
 
-    /**
-     * Bulk update claim status for multiple bill items (Admin only)
-     */
-    public function bulkUpdateClaimStatus(BulkUpdateClaimStatusRequest $request): JsonResponse
-    {
-        $targetUser = $this->billService->bulkUpdateClaimStatus($request->items);
-
-        if ($targetUser) {
-            $data = $this->billService->calculateAndEmailClaimableAmount($targetUser);
-
-            return response()->json($data);
-        }
-
-        return response()->json([
-            'message' => 'Claim statuses updated successfully.',
-        ]);
-    }
 
     /**
      * View the file associated with the bill.
