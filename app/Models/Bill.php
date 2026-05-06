@@ -36,6 +36,7 @@ class Bill extends Model implements HasMedia
         'user_id',
         'category_id',
         'category_monthly_pivot_id',
+        'bill_upload_batch_id',
         'bill_no',
         'vat_no',
         'amount',
@@ -54,6 +55,10 @@ class Bill extends Model implements HasMedia
         return $this->belongsTo(Category::class);
     }
 
+    public function billUploadBatch(): BelongsTo
+    {
+        return $this->belongsTo(BillUploadBatch::class);
+    }
 
     public function vendorContact(): HasOne
     {

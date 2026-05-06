@@ -12,6 +12,8 @@ class StoreBillDTO
      */
     public function __construct(
         public readonly User $user,
+        public readonly string $title,
+        public readonly string $currency,
         public readonly int $categoryId,
         public readonly array $files
     ) {}
@@ -19,6 +21,8 @@ class StoreBillDTO
     public static function fromRequest(StoreBillRequest $request): self
     {
         $user = $request->user() ?? User::find(1);
+        $title = (string) $request->input('title');
+        $currency = (string) $request->input('currency');
         $categoryId = (int) $request->input('category_id');
         $files = $request->file('files');
 
@@ -31,6 +35,6 @@ class StoreBillDTO
             ];
         }
 
-        return new self($user, $categoryId, $storedFiles);
+        return new self($user, $title, $currency, $categoryId, $storedFiles);
     }
 }

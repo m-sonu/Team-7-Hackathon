@@ -20,12 +20,10 @@ class VendorContactFactory extends Factory
     {
         return [
             'bill_id' => Bill::factory(),
-            'bill_number' => fake()->bothify('VEND-####'),
             'company_name' => fake()->company(),
             'phone' => fake()->phoneNumber(),
             'email' => fake()->companyEmail(),
             'website' => fake()->url(),
-            'company_website' => fake()->url(),
         ];
     }
 }
