@@ -14,25 +14,25 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Admin User one',
                 'email' => 'admin1@jobins.com',
-                'password' => Hash::make('Admin@123#'),
+                'password' => Hash::make('password'),
                 'role' => 'Admin',
             ],
             [
                 'name' => 'Admin User two',
                 'email' => 'admin2@jobins.com',
-                'password' => Hash::make('Admin@123#'),
+                'password' => Hash::make('password'),
                 'role' => 'Admin',
             ],
             [
                 'name' => 'Employee1',
                 'email' => 'employee1@jobins.com',
-                'password' => Hash::make('Admin@123#'),
+                'password' => Hash::make('password'),
                 'role' => 'Employee',
             ],
             [
                 'name' => 'Employee2',
                 'email' => 'employee2@jobins.com',
-                'password' => Hash::make('Admin@123#'),
+                'password' => Hash::make('password'),
                 'role' => 'Employee',
             ]
         ]);
