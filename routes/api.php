@@ -22,5 +22,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
     Route::get('/bills/{bill}/file', [BillController::class, 'viewFile']);
 
-    Route::get('/users/{user}', [UserController::class, 'show']);
+    Route::get('/user/{id}', [UserController::class, 'show']);
+    Route::get('user/{id}/bills', [UserController::class , 'getUserBills']);
 });
