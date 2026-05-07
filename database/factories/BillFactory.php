@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class BillFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Define the model's default state.aaaa
      *
      * @return array<string, mixed>
      */

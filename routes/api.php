@@ -24,4 +24,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user/{id}', [UserController::class, 'show']);
     Route::get('user/{id}/bills', [UserController::class , 'getUserBills']);
+    Route::get('user/bill/{id}', [UserController::class , 'getUserBillsDetails']);
 });

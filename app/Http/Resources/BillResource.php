@@ -22,12 +22,14 @@ class BillResource extends JsonResource
             'approve_amount' => $this->approve_amount,
             'status' => $this->status,
             'category' => new CategoryResource($this->whenLoaded('category')),
-            'batch' => [
-                'id' => $this->bill_upload_batch_id,
-                'title' => $this->billUploadBatch?->title,
-                'currency' => $this->billUploadBatch?->currency,
-                'category' => $this->billUploadBatch?->category?->name,
-            ],
+            'batch' => $this->whenLoaded('batch', function () {
+                return [
+                    'id' => $this->batch->id,
+                    'title' => $this->batch->title,
+                    'currency' => $this->batch->currency,
+                    'category' => $this->batch->category?->name,
+                ];
+            }),
             'created_at' => $this->created_at->format('M d, Y'),
             'updated_at' => $this->updated_at->format('M d, Y'),
         ];
