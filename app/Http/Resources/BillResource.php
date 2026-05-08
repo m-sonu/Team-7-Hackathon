@@ -18,8 +18,8 @@ class BillResource extends JsonResource
             'id' => $this->id,
             'bill_no' => $this->bill_no,
             'vat_no' => $this->vat_no,
-            'amount' => $this->amount,
-            'approve_amount' => $this->approve_amount,
+             'amount' => format_currency($this->amount ?? 0),
+            'approved_amount' => format_currency($this->approve_amount ?? 0),
             'status' => $this->status,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'batch' => $this->whenLoaded('batch', function () {
@@ -28,6 +28,13 @@ class BillResource extends JsonResource
                     'title' => $this->batch->title,
                     'currency' => $this->batch->currency,
                     'category' => $this->batch->category?->name,
+                ];
+            }),
+              'vendorContact' => $this->whenLoaded('vendorContact', function () {
+                return [
+                    'id' => $this->vendorContact->id,
+                    'company_name' => $this->vendorContact->company_name,
+                    'phone' => $this->vendorContact->phone,
                 ];
             }),
             'created_at' => $this->created_at->format('M d, Y'),

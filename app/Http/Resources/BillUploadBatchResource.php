@@ -15,12 +15,13 @@ class BillUploadBatchResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+
         return [
             'id' => $this->id,
             'title' => $this->title,
             'category' => $this->category?->name,
-            'created_date' => $this->created_at->format('M d y'),
-            'approved_amount' => (float) ($this->bills_sum_approve_amount ?? 0),
+            'created_date' => $this->created_at->format('M d Y'),
+            'approved_amount' => format_currency($this->bills_sum_approve_amount ?? 0),
             'status' => $this->determineBatchStatus(),
             'bills' => BillResource::collection($this->whenLoaded('bills')),
         ];
@@ -49,4 +50,6 @@ class BillUploadBatchResource extends JsonResource
 
         return Bill::STATUS_PENDING; // Default
     }
+
+    
 }
