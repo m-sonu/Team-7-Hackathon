@@ -15,13 +15,13 @@ class BillUploadBatchResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-
         return [
             'id' => $this->id,
             'title' => $this->title,
             'category' => $this->category?->name,
             'created_date' => $this->created_at->format('M d Y'),
-            'approved_amount' => format_currency($this->bills_sum_approve_amount ?? 0),
+            'approved_amount' => format_currency($this->bills_sum_approve_amount ?? 0, $this->currency),
+            'amount' => format_currency($this->bills_sum_amount ?? 0, $this->currency),
             'status' => $this->determineBatchStatus(),
             'bills' => BillResource::collection($this->whenLoaded('bills')),
         ];

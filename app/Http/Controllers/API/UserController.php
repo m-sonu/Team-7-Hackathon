@@ -7,6 +7,8 @@ use App\Http\Resources\BillUploadBatchDetailResource;
 use App\Http\Resources\BillUploadBatchResource;
 use App\Http\Resources\UserResource;
 use App\Http\Resources\EmployeeDashboardResource;
+use App\Http\Resources\EmployeeBillResource;
+use App\Http\Requests\EmployeeUserBillsRequest;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use App\Models\Category;
@@ -53,6 +55,7 @@ class UserController extends Controller
         ->selectRaw("
             COUNT(bill.id) as total_bills,
             SUM(bill.approve_amount) as total_approved_amount,
+             SUM(bill.amount) as total_amount,
             COUNT(CASE WHEN bill.status = ? THEN 1 END) as verified_bills_count
         ", [Bill::STATUS_VERIFIED])
         ->first();
@@ -73,6 +76,7 @@ class UserController extends Controller
             'category.id as category_id',
             'category.name as category',
             DB::raw('SUM(bill.approve_amount) as approved_amount'),
+            DB::raw('SUM(bill.amount) as total_amount'),
             DB::raw('COUNT(bill.id) as bill_count'),
         ])
         ->groupBy('category.id', 'category.name')
@@ -100,6 +104,7 @@ class UserController extends Controller
         $batches = BillUploadBatch::query()
             ->with(['category'])
             ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
+              ->withSum('bills as bills_sum_amount', 'amount')
             ->withCount('bills')
             ->where('user_id', $user->id)
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->category_id)
@@ -127,7 +132,7 @@ class UserController extends Controller
         $batch = BillUploadBatch::with([
             'category',
             'bills' => function ($q) {
-                $q->without('batch')
+                $q->with('billUploadBatch')
                    ->with('vendorContact');
             },
         ])
@@ -142,5 +147,58 @@ class UserController extends Controller
         }
 
         return new BillUploadBatchDetailResource($batch);
+    }
+
+    public function getEmployeeBills(EmployeeUserBillsRequest $request)
+    {
+        $month = $request->month ?? now()->month;
+        $year = now()->year;
+
+        $selectedMonth = Carbon::create($year, $month, 1);
+
+        $startDate = $selectedMonth->copy()
+            ->subMonth()
+            ->day(26)
+            ->startOfDay();
+
+        $endDate = $selectedMonth->copy()
+            ->day(25)
+            ->endOfDay();
+
+       $users = Bill::query()
+        ->join('users', 'users.id', '=', 'bill.user_id')
+      ->leftJoin('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
+        ->where('users.role', 'Employee')
+        ->whereBetween('bill.created_at', [$startDate, $endDate])
+
+        // status filter (optional)
+        ->when($request->filled('status'), function ($q) use ($request) {
+            $q->where('bill.status', $request->status);
+        })
+
+        ->groupBy('users.id', 'users.name', 'users.email')
+
+        ->select([
+            'users.id',
+            'users.name',
+            'users.email',
+            DB::raw('MAX(batch.currency) as currency'),
+            DB::raw('MAX(bill.status) as status'),
+            DB::raw('SUM(bill.amount) as total_amount'),
+            DB::raw('SUM(bill.approve_amount) as total_approve_amount'),
+            DB::raw('COUNT(bill.id) as bills_count'),
+        ])
+
+        ->latest('users.id')
+        ->paginate($request->per_page ?? 10);
+
+        return response()->json([
+            'success' => true,
+            'month' => $month,
+            'year' => $year,
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+            'data' => EmployeeBillResource::collection($users),
+        ]);
     }
 }

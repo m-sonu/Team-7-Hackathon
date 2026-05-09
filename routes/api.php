@@ -15,7 +15,6 @@ Route::post('/auth/{provider}/callback', [SocialiteController::class, 'callback'
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user/{id}/dashboard', [UserController::class, 'employeeDashboard']);
     Route::get('/user/{id}', [UserController::class, 'show']);
 
     Route::get('/bills/claimable-amount', [BillController::class, 'getClaimableAmount']);
@@ -23,6 +22,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
     Route::get('/bills/{bill}/file', [BillController::class, 'viewFile']);
 
+    //Employee dashboard
+    Route::get('/user/{id}/dashboard', [UserController::class, 'employeeDashboard']);
     Route::get('user/{id}/bills', [UserController::class , 'getUserBills']);
     Route::get('user/bill/{id}', [UserController::class , 'getUserBillsDetails']);
+
+    //Admin dashboard
+    Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
 });

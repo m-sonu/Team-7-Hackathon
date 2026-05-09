@@ -18,16 +18,16 @@ class BillResource extends JsonResource
             'id' => $this->id,
             'bill_no' => $this->bill_no,
             'vat_no' => $this->vat_no,
-             'amount' => format_currency($this->amount ?? 0),
-            'approved_amount' => format_currency($this->approve_amount ?? 0),
+            'amount' => format_currency($this->amount ?? 0, $this->billUploadBatch->currency),
+            'approved_amount' => format_currency($this->approve_amount ?? 0,$this->billUploadBatch->currency),
             'status' => $this->status,
             'category' => new CategoryResource($this->whenLoaded('category')),
-            'batch' => $this->whenLoaded('batch', function () {
+            'billUploadBatch' => $this->whenLoaded('billUploadBatch', function () {
                 return [
-                    'id' => $this->batch->id,
-                    'title' => $this->batch->title,
-                    'currency' => $this->batch->currency,
-                    'category' => $this->batch->category?->name,
+                    'id' => $this->billUploadBatch->id,
+                    'title' => $this->billUploadBatch->title,
+                    'currency' => $this->billUploadBatch->currency,
+                    'category' => $this->billUploadBatch->category?->name,
                 ];
             }),
               'vendorContact' => $this->whenLoaded('vendorContact', function () {
