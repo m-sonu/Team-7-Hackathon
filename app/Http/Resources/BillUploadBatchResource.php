@@ -15,6 +15,7 @@ class BillUploadBatchResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -23,6 +24,7 @@ class BillUploadBatchResource extends JsonResource
             'approved_amount' => format_currency($this->bills_sum_approve_amount ?? 0, $this->currency),
             'amount' => format_currency($this->bills_sum_amount ?? 0, $this->currency),
             'status' => $this->determineBatchStatus(),
+            'bills_count' => $this->bills_count,
             'bills' => BillResource::collection($this->whenLoaded('bills')),
         ];
     }
