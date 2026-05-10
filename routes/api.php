@@ -29,4 +29,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Admin dashboard
     Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
+
+    Route::get('/categories', function () {
+        return response()->json([
+            'data' => \App\Models\Category::where('is_active', true)->get(['id', 'name']),
+        ]);
+    });
 });
