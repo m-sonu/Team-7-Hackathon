@@ -21,8 +21,8 @@ class BillUploadBatchResource extends JsonResource
             'title' => $this->title,
             'category' => $this->category?->name,
             'created_date' => $this->created_at->format('M d Y'),
-            'approved_amount' => format_currency($this->bills_sum_approve_amount ?? 0, $this->currency),
-            'amount' => format_currency($this->bills_sum_amount ?? 0, $this->currency),
+            'approved_amount' => \format_currency($this->bills_sum_approve_amount ?? 0, $this->currency),
+            'amount' => \format_currency($this->bills_sum_amount ?? 0, $this->currency),
             'status' => $this->determineBatchStatus(),
             'bills_count' => $this->bills_count,
             'bills' => BillResource::collection($this->whenLoaded('bills')),
@@ -52,6 +52,4 @@ class BillUploadBatchResource extends JsonResource
 
         return Bill::STATUS_PENDING; // Default
     }
-
-    
 }

@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\EmployeeUserBillsRequest;
 use App\Http\Resources\BillUploadBatchDetailResource;
 use App\Http\Resources\BillUploadBatchResource;
-use App\Http\Resources\UserResource;
-use App\Http\Resources\EmployeeDashboardResource;
 use App\Http\Resources\EmployeeBillResource;
-use App\Http\Requests\EmployeeUserBillsRequest;
+use App\Http\Resources\EmployeeDashboardResource;
+use App\Http\Resources\UserResource;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use App\Models\Category;
@@ -36,60 +36,59 @@ class UserController extends Controller
     }
 
     public function employeeDashboard($id)
-{
-    $user = User::find($id);
-    if (!$user) {
-        return response()->json(['success' => false, 'message' => 'User not found'], 404);
-    }
+    {
+        $user = User::find($id);
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'User not found'], 404);
+        }
 
-    // 1. Setup Date Range (26th of last month to 25th of current month)
-    $now = Carbon::now();
-    $start = $now->copy()->subMonth()->day(26)->startOfDay();
-    $end = $now->copy()->day(25)->endOfDay();
+        // 1. Setup Date Range (26th of last month to 25th of current month)
+        $now = Carbon::now();
+        $start = $now->copy()->subMonth()->day(26)->startOfDay();
+        $end = $now->copy()->day(25)->endOfDay();
 
-    // 2. Optimization: Get primary stats in a single query from the Bill model
-    // We join the batch to filter by the batch's creation date as per your original logic
-    $stats = Bill::where('bill.user_id', $user->id)
-        ->join('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
-        ->whereBetween('batch.created_at', [$start, $end])
-        ->selectRaw("
+        // 2. Optimization: Get primary stats in a single query from the Bill model
+        // We join the batch to filter by the batch's creation date as per your original logic
+        $stats = Bill::where('bill.user_id', $user->id)
+            ->join('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
+            ->whereBetween('batch.created_at', [$start, $end])
+            ->selectRaw('
             COUNT(bill.id) as total_bills,
             SUM(bill.approve_amount) as total_approved_amount,
              SUM(bill.amount) as total_amount,
             COUNT(CASE WHEN bill.status = ? THEN 1 END) as verified_bills_count
-        ", [Bill::STATUS_VERIFIED])
-        ->first();
+        ', [Bill::STATUS_VERIFIED])
+            ->first();
 
-    // 3. Get Currency (optimized to one query, latest batch)
-    $currency = BillUploadBatch::where('user_id', $user->id)
-        ->latest()
-        ->value('currency') ?? 'NPR';
+        // 3. Get Currency (optimized to one query, latest batch)
+        $currency = BillUploadBatch::where('user_id', $user->id)
+            ->latest()
+            ->value('currency') ?? 'NPR';
 
+        // 4. Category Wise Amounts (Cleaned up Join and Selection)
+        $categoryWiseAmounts = Category::query()
+            ->join('bill as bill', 'category.id', '=', 'bill.category_id')
+            ->join('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
+            ->where('bill.user_id', $user->id)
+            ->whereBetween('batch.created_at', [$start, $end])
+            ->select([
+                'category.id as category_id',
+                'category.name as category',
+                DB::raw('SUM(bill.approve_amount) as approved_amount'),
+                DB::raw('SUM(bill.amount) as total_amount'),
+                DB::raw('COUNT(bill.id) as bill_count'),
+            ])
+            ->groupBy('category.id', 'category.name')
+            ->get();
 
-    // 4. Category Wise Amounts (Cleaned up Join and Selection)
-    $categoryWiseAmounts = Category::query()
-        ->join('bill as bill', 'category.id', '=', 'bill.category_id')
-        ->join('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
-        ->where('bill.user_id', $user->id)
-        ->whereBetween('batch.created_at', [$start, $end])
-        ->select([
-            'category.id as category_id',
-            'category.name as category',
-            DB::raw('SUM(bill.approve_amount) as approved_amount'),
-            DB::raw('SUM(bill.amount) as total_amount'),
-            DB::raw('COUNT(bill.id) as bill_count'),
-        ])
-        ->groupBy('category.id', 'category.name')
-        ->get();
+        $data = [
+            'stats' => $stats,
+            'currency' => $currency,
+            'category_wise_amounts' => $categoryWiseAmounts,
+        ];
 
-   $data = [
-        'stats' => $stats,
-        'currency' => $currency,
-        'category_wise_amounts' => $categoryWiseAmounts
-    ];
-
-    return new EmployeeDashboardResource($data);
-}
+        return new EmployeeDashboardResource($data);
+    }
 
     public function getUserBills(Request $request, $id)
     {
@@ -104,7 +103,7 @@ class UserController extends Controller
         $batches = BillUploadBatch::query()
             ->with(['category'])
             ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
-              ->withSum('bills as bills_sum_amount', 'amount')
+            ->withSum('bills as bills_sum_amount', 'amount')
             ->withCount('bills')
             ->where('user_id', $user->id)
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->category_id)
@@ -133,7 +132,7 @@ class UserController extends Controller
             'category',
             'bills' => function ($q) {
                 $q->with('billUploadBatch')
-                   ->with('vendorContact');
+                    ->with('vendorContact');
             },
         ])
             ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
@@ -165,32 +164,29 @@ class UserController extends Controller
             ->day(25)
             ->endOfDay();
 
-       $users = Bill::query()
-        ->join('users', 'users.id', '=', 'bill.user_id')
-      ->leftJoin('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
-        ->where('users.role', 'Employee')
-        ->whereBetween('bill.created_at', [$startDate, $endDate])
+        $users = Bill::query()
+            ->join('users', 'users.id', '=', 'bill.user_id')
+            ->leftJoin('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
+            ->where('users.role', 'Employee')
+            ->whereBetween('bill.created_at', [$startDate, $endDate])
 
-        // status filter (optional)
-        ->when($request->filled('status'), function ($q) use ($request) {
-            $q->where('bill.status', $request->status);
-        })
-
-        ->groupBy('users.id', 'users.name', 'users.email')
-
-        ->select([
-            'users.id',
-            'users.name',
-            'users.email',
-            DB::raw('MAX(batch.currency) as currency'),
-            DB::raw('MAX(bill.status) as status'),
-            DB::raw('SUM(bill.amount) as total_amount'),
-            DB::raw('SUM(bill.approve_amount) as total_approve_amount'),
-            DB::raw('COUNT(bill.id) as bills_count'),
-        ])
-
-        ->latest('users.id')
-        ->paginate($request->per_page ?? 10);
+         // status filter (optional)
+            ->when($request->filled('status'), function ($q) use ($request) {
+                $q->where('bill.status', $request->status);
+            })
+            ->groupBy('users.id', 'users.name', 'users.email')
+            ->select([
+                'users.id',
+                'users.name',
+                'users.email',
+                DB::raw('MAX(batch.currency) as currency'),
+                DB::raw('MAX(bill.status) as status'),
+                DB::raw('SUM(bill.amount) as total_amount'),
+                DB::raw('SUM(bill.approve_amount) as total_approve_amount'),
+                DB::raw('COUNT(bill.id) as bills_count'),
+            ])
+            ->latest('users.id')
+            ->paginate($request->per_page ?? 10);
 
         return response()->json([
             'success' => true,

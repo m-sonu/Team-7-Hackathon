@@ -18,9 +18,12 @@ class BillResource extends JsonResource
             'id' => $this->id,
             'bill_no' => $this->bill_no,
             'vat_no' => $this->vat_no,
-            'amount' => format_currency($this->amount ?? 0, $this->billUploadBatch->currency),
-            'approved_amount' => format_currency($this->approve_amount ?? 0,$this->billUploadBatch->currency),
+            'amount' => \format_currency($this->amount ?? 0, $this->billUploadBatch->currency),
+            'approved_amount' => \format_currency($this->approve_amount ?? 0, $this->billUploadBatch->currency),
             'status' => $this->status,
+            'is_valid' => $this->is_valid ?? true,
+            'validation_error' => $this->validation_error,
+            'file_preview_url' => $this->file_preview_url,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'billUploadBatch' => $this->whenLoaded('billUploadBatch', function () {
                 return [
@@ -30,7 +33,7 @@ class BillResource extends JsonResource
                     'category' => $this->billUploadBatch->category?->name,
                 ];
             }),
-              'vendorContact' => $this->whenLoaded('vendorContact', function () {
+            'vendorContact' => $this->whenLoaded('vendorContact', function () {
                 return [
                     'id' => $this->vendorContact->id,
                     'company_name' => $this->vendorContact->company_name,

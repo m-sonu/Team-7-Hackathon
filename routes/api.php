@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\API\AuthController;
-use App\Http\Controllers\Api\BillController;
+use App\Http\Controllers\API\BillController;
+use App\Http\Controllers\API\BillUploadBatchController;
 use App\Http\Controllers\API\SocialiteController;
-use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\API\UserController;
+use App\Models\Category;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -20,19 +22,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bills/claimable-amount', [BillController::class, 'getClaimableAmount']);
     Route::apiResource('bills', BillController::class);
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
-    Route::get('/bills/{bill}/file', [BillController::class, 'viewFile']);
+    Route::get('/bills/{bill}/file', [BillController::class, 'viewFile'])->name('bills.file');
+    Route::get('/batches/{batch}/preview', [BillUploadBatchController::class, 'preview'])->name('batches.preview');
 
-    //Employee dashboard
+    // Employee dashboard
     Route::get('/user/{id}/dashboard', [UserController::class, 'employeeDashboard']);
-    Route::get('user/{id}/bills', [UserController::class , 'getUserBills']);
-    Route::get('user/bill/{id}', [UserController::class , 'getUserBillsDetails']);
+    Route::get('user/{id}/bills', [UserController::class, 'getUserBills']);
+    Route::get('user/bill/{id}', [UserController::class, 'getUserBillsDetails']);
 
-    //Admin dashboard
+    // Admin dashboard
     Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
 
     Route::get('/categories', function () {
         return response()->json([
-            'data' => \App\Models\Category::where('is_active', true)->get(['id', 'name']),
+            'data' => Category::where('is_active', true)->get(['id', 'name']),
         ]);
     });
 });

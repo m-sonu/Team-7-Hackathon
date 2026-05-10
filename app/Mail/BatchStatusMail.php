@@ -22,7 +22,8 @@ class BatchStatusMail extends Mailable implements ShouldQueue
     public function __construct(
         public BillUploadBatch $batch,
         public Collection $validBills,
-        public Collection $invalidBills
+        public Collection $invalidBills,
+        public string $previewUrl
     ) {}
 
     /**
