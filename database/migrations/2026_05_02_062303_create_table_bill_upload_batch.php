@@ -23,11 +23,12 @@ return new class extends Migration
             // Link to the Category
             $table->foreignId('category_id')->constrained(Category::TABLE_NAME)->onDelete('cascade');
 
-            // Link to the monthly budget/pivot table
             $table->foreignId('category_monthly_pivot_id')
                 ->nullable()
                 ->constrained(CategoryMonthlyPivot::TABLE_NAME)
                 ->onDelete('set null');
+
+            $table->boolean('ai_processing')->default(true);
 
             $table->timestamps();
         });

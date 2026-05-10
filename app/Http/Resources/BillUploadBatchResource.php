@@ -23,6 +23,7 @@ class BillUploadBatchResource extends JsonResource
             'created_date' => $this->created_at->format('M d Y'),
             'approved_amount' => \format_currency($this->bills_sum_approve_amount ?? 0, $this->currency),
             'amount' => \format_currency($this->bills_sum_amount ?? 0, $this->currency),
+            'ai_processing' => $this->ai_processing,
             'status' => $this->determineBatchStatus(),
             'bills_count' => $this->bills_count,
             'bills' => BillResource::collection($this->whenLoaded('bills')),

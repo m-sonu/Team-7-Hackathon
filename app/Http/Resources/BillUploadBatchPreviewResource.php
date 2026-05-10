@@ -20,6 +20,7 @@ class BillUploadBatchPreviewResource extends JsonResource
             'currency' => $this['batch']->currency,
             'category' => $this['batch']->category?->name,
             'submitted_at' => $this['batch']->created_at->format('Y-m-d H:i:s'),
+            'ai_processing' => $this['batch']->ai_processing,
             'totals' => $this['totals'],
             'valid_bills' => BillResource::collection($this['valid_bills']),
             'invalid_bills' => BillResource::collection($this['invalid_bills']),

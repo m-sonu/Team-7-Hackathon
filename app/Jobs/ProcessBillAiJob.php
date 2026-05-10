@@ -6,6 +6,7 @@ use App\Actions\NotifyUserOfBatchStatusAction;
 use App\Actions\StoreBillAction;
 use App\DTOs\AiParsedBillDTO;
 use App\DTOs\StoreBillDTO;
+use App\Models\BillUploadBatch;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,8 @@ class ProcessBillAiJob implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-        public StoreBillDTO $storeBillDto
+        public StoreBillDTO $storeBillDto,
+        public BillUploadBatch $batch
     ) {}
 
     /**
@@ -32,51 +34,47 @@ class ProcessBillAiJob implements ShouldQueue
      */
     public function handle(StoreBillAction $storeBillAction, NotifyUserOfBatchStatusAction $notifyAction): void
     {
-        $batch = null;
+        try {
+            DB::transaction(function () use ($storeBillAction) {
+                foreach ($this->storeBillDto->files as $file) {
+                    $filePath = $file['path'];
+                    $originalName = $file['original_name'];
 
-        DB::transaction(function () use ($storeBillAction, &$batch) {
-            foreach ($this->storeBillDto->files as $file) {
-                $filePath = $file['path'];
-                $originalName = $file['original_name'];
+                    try {
+                        $fileContents = Storage::get($filePath);
 
-                try {
-                    $fileContents = Storage::get($filePath);
+                        $response = Http::timeout(300)->attach(
+                            'file',
+                            $fileContents,
+                            $originalName
+                        )->post(config('services.tanuki.ai_url'));
 
-                    $response = Http::timeout(300)->attach(
-                        'file',
-                        $fileContents,
-                        $originalName
-                    )->post(config('services.tanuki.ai_url'));
+                        if ($response->failed()) {
+                            Log::error("AI Parsing failed for {$filePath}: ".$response->body());
 
-                    if ($response->failed()) {
-                        Log::error("AI Parsing failed for {$filePath}: ".$response->body());
+                            continue;
+                        }
 
-                        continue;
+                        $aiData = $response->json('data');
+
+                        logger()->info('This is data from ai : ', [$aiData]);
+                        $aiDTO = AiParsedBillDTO::fromAiResponse($aiData);
+
+                        $storeBillAction->execute(
+                            $this->storeBillDto,
+                            $filePath,
+                            $aiDTO,
+                            $originalName,
+                            $this->batch
+                        );
+                    } catch (\Exception $e) {
+                        Log::error("Failed to process bill AI for file {$filePath}: ".$e->getMessage());
                     }
-
-                    $aiData = $response->json('data');
-
-                    logger()->info('This is data from ai : ', [$aiData]);
-                    $aiDTO = AiParsedBillDTO::fromAiResponse($aiData);
-
-                    $bill = $storeBillAction->execute(
-                        $this->storeBillDto,
-                        $filePath,
-                        $aiDTO,
-                        $originalName
-                    );
-
-                    if (! $batch) {
-                        $batch = $bill->billUploadBatch;
-                    }
-                } catch (\Exception $e) {
-                    Log::error("Failed to process bill AI for file {$filePath}: ".$e->getMessage());
                 }
-            }
-        });
-
-        if ($batch) {
-            $notifyAction->execute($batch);
+            });
+        } finally {
+            $this->batch->update(['ai_processing' => false]);
+            $notifyAction->execute($this->batch);
         }
     }
 }

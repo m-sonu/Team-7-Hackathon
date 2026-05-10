@@ -23,6 +23,11 @@ class BillUploadBatch extends Model
         'user_id',
         'category_id',
         'category_monthly_pivot_id',
+        'ai_processing',
+    ];
+
+    protected $casts = [
+        'ai_processing' => 'boolean',
     ];
 
     public function user(): BelongsTo

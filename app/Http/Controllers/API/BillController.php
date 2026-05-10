@@ -10,6 +10,7 @@ use App\Jobs\ProcessBillAiJob;
 use App\Models\Bill;
 use App\Models\User;
 use App\Services\BillService;
+use App\Services\BillUploadBatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,14 +30,18 @@ class BillController extends Controller
         ]);
     }
 
-    public function store(StoreBillRequest $request): JsonResponse
+    public function store(StoreBillRequest $request, BillUploadBatchService $batchService): JsonResponse
     {
         $dto = StoreBillDTO::fromRequest($request);
 
-        ProcessBillAiJob::dispatch($dto);
+        $batch = $batchService->createBatch($dto);
+
+        ProcessBillAiJob::dispatch($dto, $batch);
 
         return response()->json([
             'message' => 'Bills have been queued for AI processing.',
+            'batch_id' => $batch->id,
+            'title' => $batch->title,
         ], 202);
     }
 
@@ -92,7 +97,6 @@ class BillController extends Controller
 
         return response()->json($data);
     }
-
 
     /**
      * View the file associated with the bill.

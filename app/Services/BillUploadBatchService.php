@@ -2,11 +2,60 @@
 
 namespace App\Services;
 
+use App\DTOs\StoreBillDTO;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
+use App\Models\CategoryMonthlyPivot;
+use Carbon\Carbon;
 
 class BillUploadBatchService
 {
+    /**
+     * Create a new bill upload batch.
+     */
+    public function createBatch(StoreBillDTO $dto): BillUploadBatch
+    {
+        $monthYear = $this->getMonthYear();
+
+        // Check or create pivot
+        $pivot = CategoryMonthlyPivot::query()->firstOrCreate(
+            [
+                'user_id' => $dto->user->id,
+                'category_id' => $dto->categoryId,
+                'month_year' => $monthYear,
+            ],
+            [
+                'bill_count' => 0,
+                'total_spent' => 0,
+                'last_updated_at' => now(),
+            ]
+        );
+
+        return BillUploadBatch::create([
+            'user_id' => $dto->user->id,
+            'category_id' => $dto->categoryId,
+            'category_monthly_pivot_id' => $pivot->id,
+            'title' => $dto->title,
+            'currency' => $dto->currency,
+            'ai_processing' => true,
+        ]);
+    }
+
+    /**
+     * Get the month-year string for the billing cycle.
+     */
+    private function getMonthYear(): string
+    {
+        $date = Carbon::now();
+        $cutoff = config('app.billing_cutoff', 26);
+
+        if ($date->day >= $cutoff) {
+            $date->addMonth();
+        }
+
+        return $date->format('Y-m');
+    }
+
     /**
      * Get the batch preview details including validation status.
      */
