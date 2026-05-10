@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\NotifyUserOfBatchStatusAction;
 use App\Actions\StoreBillAction;
 use App\DTOs\AiParsedBillDTO;
 use App\DTOs\StoreBillDTO;
@@ -29,10 +30,11 @@ class ProcessBillAiJob implements ShouldQueue
      *
      * @throws Throwable
      */
-    public function handle(StoreBillAction $storeBillAction): void
+    public function handle(StoreBillAction $storeBillAction, NotifyUserOfBatchStatusAction $notifyAction): void
     {
-        DB::transaction(function () use ($storeBillAction) {
+        $batch = null;
 
+        DB::transaction(function () use ($storeBillAction, &$batch) {
             foreach ($this->storeBillDto->files as $file) {
                 $filePath = $file['path'];
                 $originalName = $file['original_name'];
@@ -57,15 +59,24 @@ class ProcessBillAiJob implements ShouldQueue
                     logger()->info('This is data from ai : ', [$aiData]);
                     $aiDTO = AiParsedBillDTO::fromAiResponse($aiData);
 
-                    $storeBillAction->execute(
+                    $bill = $storeBillAction->execute(
                         $this->storeBillDto,
                         $filePath,
-                        $aiDTO
+                        $aiDTO,
+                        $originalName
                     );
+
+                    if (! $batch) {
+                        $batch = $bill->billUploadBatch;
+                    }
                 } catch (\Exception $e) {
                     Log::error("Failed to process bill AI for file {$filePath}: ".$e->getMessage());
                 }
             }
         });
+
+        if ($batch) {
+            $notifyAction->execute($batch);
+        }
     }
 }

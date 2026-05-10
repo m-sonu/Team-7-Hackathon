@@ -15,7 +15,7 @@ class StoreBillAction
     /**
      * @throws Throwable
      */
-    public function execute(StoreBillDTO $storeBillDto, string $imagePath, AiParsedBillDTO $aiDTO)
+    public function execute(StoreBillDTO $storeBillDto, string $imagePath, AiParsedBillDTO $aiDTO, string $originalName)
     {
         $monthYear = $this->getMonthYear();
 
@@ -54,7 +54,9 @@ class StoreBillAction
         ]));
 
         // Add media from storage
-        $bill->addMediaFromDisk($imagePath)->toMediaCollection('bills');
+        $bill->addMediaFromDisk($imagePath)
+            ->usingName($originalName)
+            ->toMediaCollection('bills');
 
         // Create vendor contact
         if (! empty($aiDTO->vendorContact)) {
