@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BillStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,17 +21,13 @@ class Bill extends Model implements HasMedia
             ->singleFile();
     }
 
-    public const STATUS_PENDING = 'pending';
-
-    public const STATUS_VERIFIED = 'verified';
-
-    public const STATUS_REJECTED = 'rejected';
-
-    public const STATUS_PAID = 'paid';
-
     public const TABLE_NAME = 'bill';
 
     protected $table = self::TABLE_NAME;
+
+    protected $casts = [
+        'status' => BillStatus::class,
+    ];
 
     protected $fillable = [
         'user_id',
@@ -42,6 +39,7 @@ class Bill extends Model implements HasMedia
         'amount',
         'approve_amount',
         'status',
+        'validation_error',
         'raw_text',
     ];
 

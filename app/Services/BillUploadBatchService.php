@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\DTOs\StoreBillDTO;
+use App\Enums\BillStatus;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use App\Models\CategoryMonthlyPivot;
@@ -54,6 +55,58 @@ class BillUploadBatchService
         }
 
         return $date->format('Y-m');
+    }
+
+    /**
+     * Validate all bills in a batch and update their status in the database.
+     */
+    public function validateAndSetBillStatuses(BillUploadBatch $batch): void
+    {
+        $batch->load('bills');
+        $seenInBatch = [];
+
+        // Fetch all existing (vat_no, bill_no) pairs for this user, excluding current batch bills
+        $globalDuplicates = Bill::query()
+            ->where('user_id', $batch->user_id)
+            ->whereNotIn('id', $batch->bills->pluck('id'))
+            ->whereNotNull('vat_no')
+            ->whereNotNull('bill_no')
+            ->select(['vat_no', 'bill_no'])
+            ->get()
+            ->map(fn (Bill $b) => "{$b->vat_no}_{$b->bill_no}")
+            ->flip()
+            ->toArray();
+
+        foreach ($batch->bills as $bill) {
+            $isValid = true;
+            $reason = null;
+
+            // Rule 1: Data Integrity
+            if (empty($bill->vat_no) || empty($bill->bill_no)) {
+                $isValid = false;
+                $reason = 'Missing or unreadable VAT/Bill number';
+            } else {
+                $key = "{$bill->vat_no}_{$bill->bill_no}";
+
+                // Rule 3: Batch Collision
+                if (isset($seenInBatch[$key])) {
+                    $isValid = false;
+                    $reason = 'Duplicate bill within the same batch';
+                }
+                // Rule 2: Global Uniqueness
+                elseif (isset($globalDuplicates[$key])) {
+                    $isValid = false;
+                    $reason = 'Bill already exists in previous submissions';
+                } else {
+                    $seenInBatch[$key] = true;
+                }
+            }
+
+            $bill->update([
+                'status' => $isValid ? BillStatus::PENDING : BillStatus::INVALID,
+                'validation_error' => $reason,
+            ]);
+        }
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\Bill;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Enums\BillStatus;
 
 /**
  * @extends Factory<Bill>
@@ -28,7 +29,7 @@ class BillFactory extends Factory
             'approve_amount' => function (array $attributes) {
                 return $attributes['amount'];
             },
-            'status' => Bill::STATUS_VERIFIED,
+            'status' => $this->faker->randomElement([BillStatus::VERIFIED, BillStatus::INVALID, BillStatus::REJECTED, BillStatus::REIMBURSED]),
             'raw_text' => fake()->paragraph(),
             'category_monthly_pivot_id' => null, // Will be set in seeder
         ];

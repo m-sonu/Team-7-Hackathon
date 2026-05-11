@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Bill;
+use App\Enums\BillStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -36,21 +36,21 @@ class BillUploadBatchResource extends JsonResource
     protected function determineBatchStatus(): string
     {
         if ($this->bills_count_pending > 0) {
-            return Bill::STATUS_PENDING;
+            return BillStatus::PENDING->value;
         }
 
         if ($this->bills_count_verified > 0) {
-            return Bill::STATUS_VERIFIED;
+            return BillStatus::VERIFIED->value;
         }
 
         if ($this->bills_count_paid > 0) {
-            return Bill::STATUS_PAID;
+            return BillStatus::REIMBURSED->value;
         }
 
         if ($this->bills_count_rejected > 0) {
-            return Bill::STATUS_REJECTED;
+            return BillStatus::REJECTED->value;
         }
 
-        return Bill::STATUS_PENDING; // Default
+        return BillStatus::PENDING->value; // Default
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\BillStatus;
 use App\Mail\ClaimableAmountReportMail;
 use App\Models\Bill;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class BillService
@@ -39,7 +39,7 @@ class BillService
     /**
      * Change the status of a bill.
      */
-    public function changeBillStatus(Bill $bill, string $status): Bill
+    public function changeBillStatus(Bill $bill, BillStatus $status): Bill
     {
         $bill->update(['status' => $status]);
 
@@ -58,7 +58,7 @@ class BillService
         $bills = Bill::where('user_id', $user->id)
             ->whereMonth('created_at', $month)
             ->whereYear('created_at', $year)
-            ->where('status', Bill::STATUS_VERIFIED)
+            ->where('status', BillStatus::VERIFIED)
             ->get();
 
         $totalClaimableAmount = $bills->sum('amount');

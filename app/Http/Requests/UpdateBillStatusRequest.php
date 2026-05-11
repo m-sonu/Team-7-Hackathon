@@ -2,9 +2,10 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Bill;
+use App\Enums\BillStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateBillStatusRequest extends FormRequest
 {
@@ -27,12 +28,7 @@ class UpdateBillStatusRequest extends FormRequest
             'amount' => 'required|numeric',
             'bill_no' => 'required|string',
             'vat_no' => 'required|string',
-            'status' => 'required|string|in:'.implode(',', [
-                Bill::STATUS_PENDING,
-                Bill::STATUS_VERIFIED,
-                Bill::STATUS_REJECTED,
-                Bill::STATUS_PAID,
-            ]),
+            'status' => ['required', 'string', new Enum(BillStatus::class)],
         ];
     }
 }

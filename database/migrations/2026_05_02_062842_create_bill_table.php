@@ -27,6 +27,7 @@ return new class extends Migration
                 ->constrained(BillUploadBatch::TABLE_NAME)
                 ->onDelete('set null');
             $table->string('status')->default('pending');
+            $table->string('validation_error')->nullable();
             $table->text('raw_text')->nullable();
             $table->timestamps();
 

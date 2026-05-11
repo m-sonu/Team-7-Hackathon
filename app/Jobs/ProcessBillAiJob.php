@@ -7,6 +7,7 @@ use App\Actions\StoreBillAction;
 use App\DTOs\AiParsedBillDTO;
 use App\DTOs\StoreBillDTO;
 use App\Models\BillUploadBatch;
+use App\Services\BillUploadBatchService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -73,6 +74,9 @@ class ProcessBillAiJob implements ShouldQueue
                 }
             });
         } finally {
+            $batchService = app(BillUploadBatchService::class);
+            $batchService->validateAndSetBillStatuses($this->batch);
+
             $this->batch->update(['ai_processing' => false]);
             $notifyAction->execute($this->batch);
         }

@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\DTOs\AiParsedBillDTO;
 use App\DTOs\StoreBillDTO;
+use App\Enums\BillStatus;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use Throwable;
@@ -15,18 +16,16 @@ class StoreBillAction
      */
     public function execute(StoreBillDTO $storeBillDto, string $imagePath, AiParsedBillDTO $aiDTO, string $originalName, BillUploadBatch $batch)
     {
-        $monthYear = $this->getMonthYear();
-
         // Check or create pivot
         $pivot = $batch->categoryMonthlyPivot;
 
         // Create bill
-        $bill = Bill::create(array_merge($aiDTO->bill, [
+        $bill = Bill::query()->create(array_merge($aiDTO->bill, [
             'user_id' => $storeBillDto->user->id,
             'category_id' => $storeBillDto->categoryId,
             'category_monthly_pivot_id' => $pivot->id,
             'bill_upload_batch_id' => $batch->id,
-            'status' => Bill::STATUS_PENDING,
+            'status' => BillStatus::PENDING,
         ]));
 
         // Add media from storage

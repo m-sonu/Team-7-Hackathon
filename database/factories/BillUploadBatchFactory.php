@@ -25,6 +25,7 @@ class BillUploadBatchFactory extends Factory
             'user_id' => User::factory(),
             'category_id' => Category::factory(),
             'category_monthly_pivot_id' => null,
+            'ai_processing' => $this->faker->boolean(),
         ];
     }
 }

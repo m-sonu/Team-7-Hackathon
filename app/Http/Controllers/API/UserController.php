@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Enums\BillStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmployeeUserBillsRequest;
 use App\Http\Resources\BillUploadBatchDetailResource;
@@ -57,7 +58,7 @@ class UserController extends Controller
             SUM(bill.approve_amount) as total_approved_amount,
              SUM(bill.amount) as total_amount,
             COUNT(CASE WHEN bill.status = ? THEN 1 END) as verified_bills_count
-        ', [Bill::STATUS_VERIFIED])
+        ', [BillStatus::VERIFIED->value])
             ->first();
 
         // 3. Get Currency (optimized to one query, latest batch)
