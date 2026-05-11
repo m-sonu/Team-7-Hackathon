@@ -44,10 +44,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/bills/{bill}/verify', [VerifyBillController::class, 'verifyBill']);
         Route::post('/bills/{pivotId}/bulk-reimburse', [VerifyBillController::class, 'bulkReimburse']);
          Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
+         Route::get('/categoryWiseBills/{userId}/{categoryId}',[CategoryController::class,'getUserCategoryWiseBillDetails']);
+        Route::get('/categoryWiseBills/{userId}',[CategoryController::class,'getUserCategoryWiseBills']);
     });
 
     //Category
     Route::get('/categories', [CategoryController::class, 'index']);
-    Route::get('/categoryWiseBills/{userId}/{categoryId}',[CategoryController::class,'getUserCategoryWiseBillDetails']);
-    Route::get('/categoryWiseBills/{userId}',[CategoryController::class,'getUserCategoryWiseBills']);
 });
