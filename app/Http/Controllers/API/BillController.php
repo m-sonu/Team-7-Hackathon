@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Actions\SubmitBillForReimburseAction;
 use App\DTOs\StoreBillDTO;
+use App\Enums\BillStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillStatusRequest;
 use App\Jobs\ProcessBillAiJob;
 use App\Models\Bill;
+use App\Models\BillUploadBatch;
 use App\Models\User;
 use App\Services\BillService;
 use App\Services\BillUploadBatchService;
@@ -46,6 +50,20 @@ class BillController extends Controller
     }
 
     /**
+     * Submit all pending bills in a batch for reimbursement.
+     */
+    public function submitBatch(BillUploadBatch $batch, SubmitBillForReimburseAction $action): JsonResponse
+    {
+        $this->authorize('view', $batch);
+
+        $count = $action->execute($batch);
+
+        return response()->json([
+            'message' => "Successfully submitted {$count} bills for reimbursement.",
+        ]);
+    }
+
+    /**
      * Display the specified resource.
      */
     public function show(string $id)
@@ -74,7 +92,7 @@ class BillController extends Controller
      */
     public function changeStatus(UpdateBillStatusRequest $request, Bill $bill): JsonResponse
     {
-        $bill = $this->billService->changeBillStatus($bill, $request->status);
+        $bill = $this->billService->changeBillStatus($bill, BillStatus::from($request->status));
 
         return response()->json([
             'message' => 'Bill status updated successfully',
@@ -89,7 +107,7 @@ class BillController extends Controller
     {
         $user = $request->user();
 
-        if ($request->has('user_id') && $user->role === 'admin') {
+        if ($request->has('user_id') && $user->role === UserRole::ADMIN) {
             $user = User::findOrFail($request->user_id);
         }
 
@@ -106,7 +124,7 @@ class BillController extends Controller
         $user = $request->user();
 
         // Check if user is owner or admin
-        if ($user->id !== $bill->user_id && $user->role !== 'admin') {
+        if ($user->id !== $bill->user_id && $user->role !== UserRole::ADMIN) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

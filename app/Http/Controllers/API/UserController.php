@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Enums\BillStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmployeeUserBillsRequest;
 use App\Http\Resources\BillUploadBatchDetailResource;
@@ -14,6 +15,7 @@ use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use App\Models\Category;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +25,7 @@ class UserController extends Controller
     /**
      * Display the specified user.
      */
-    public function show(int $id): UserResource
+    public function show(int $id): UserResource|JsonResponse
     {
         $user = User::find($id);
         if (! $user) {
@@ -107,10 +109,16 @@ class UserController extends Controller
             ->withSum('bills as bills_sum_amount', 'amount')
             ->withCount('bills')
             ->where('user_id', $user->id)
-            ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->category_id)
+            ->when(
+                $request->filled('category_id'),
+                fn ($q) => $q->where('category_id', $request->category_id)
             )
-            ->when($request->filled('status'), fn ($q) => $q->whereHas('bills', fn ($b) => $b->where('status', $request->status)
-            )
+            ->when(
+                $request->filled('status'),
+                fn ($q) => $q->whereHas(
+                    'bills',
+                    fn ($b) => $b->where('status', $request->status)
+                )
             )
             ->when($month, function ($q) use ($request, $month) {
                 $year = $request->input('year', now()->year);
@@ -168,10 +176,10 @@ class UserController extends Controller
         $users = Bill::query()
             ->join('users', 'users.id', '=', 'bill.user_id')
             ->leftJoin('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
-            ->where('users.role', 'Employee')
+            ->where('users.role', UserRole::EMPLOYEE->value)
             ->whereBetween('bill.created_at', [$startDate, $endDate])
 
-         // status filter (optional)
+            // status filter (optional)
             ->when($request->filled('status'), function ($q) use ($request) {
                 $q->where('bill.status', $request->status);
             })

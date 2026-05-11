@@ -45,7 +45,7 @@ class BillUploadBatchService
     /**
      * Get the month-year string for the billing cycle.
      */
-    private function getMonthYear(): string
+    public function getMonthYear(): string
     {
         $date = Carbon::now();
         $cutoff = config('app.billing_cutoff', 26);
@@ -104,7 +104,7 @@ class BillUploadBatchService
 
             $bill->update([
                 'status' => $isValid ? BillStatus::PENDING : BillStatus::INVALID,
-                'validation_error' => $reason,
+                'reason_for_action' => $reason,
             ]);
         }
     }
@@ -158,7 +158,7 @@ class BillUploadBatchService
             }
 
             $bill->is_valid = $isValid;
-            $bill->validation_error = $reason;
+            $bill->validation_error = $reason ?? $bill->reason_for_action;
             $bill->file_preview_url = url("/api/bills/{$bill->id}/file");
 
             if ($isValid) {

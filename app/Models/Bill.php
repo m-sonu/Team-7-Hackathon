@@ -39,7 +39,7 @@ class Bill extends Model implements HasMedia
         'amount',
         'approve_amount',
         'status',
-        'validation_error',
+        'reason_for_action',
         'raw_text',
     ];
 

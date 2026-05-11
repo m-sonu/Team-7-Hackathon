@@ -5,6 +5,7 @@ use App\Http\Controllers\API\BillController;
 use App\Http\Controllers\API\BillUploadBatchController;
 use App\Http\Controllers\API\SocialiteController;
 use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\API\VerifyBillController;
 use App\Models\Category;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin dashboard
     Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
+
+    // Bill Submission (Normal User)
+    Route::post('/batches/{batch}/submit', [BillController::class, 'submitBatch'])->name('batches.submit');
+
+    // Admin Bill Verification
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::post('/bills/{bill}/verify', [VerifyBillController::class, 'verifyBill']);
+        Route::post('/bills/{pivotId}/bulk-reimburse', [VerifyBillController::class, 'bulkReimburse']);
+    });
 
     Route::get('/categories', function () {
         return response()->json([

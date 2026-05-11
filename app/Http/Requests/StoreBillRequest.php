@@ -19,6 +19,16 @@ class StoreBillRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->hasFile('files[]') && ! $this->hasFile('files')) {
+            $this->merge(['files' => $this->file('files[]')]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -41,7 +51,7 @@ class StoreBillRequest extends FormRequest
             'currency' => ['required', 'string', Rule::in(Currency::values())],
             'category_id' => 'required|integer|exists:category,id',
             'files' => 'required|array|min:1|max:3',
-            'files.*' => 'file|image|mimes:jpeg,png,jpg,webp|max:10240',
+            'files.*' => 'file|mimes:jpeg,png,jpg,webp,pdf,pptx,ppt,docx,doc,csv,xlsx,xls|max:10240',
         ];
     }
 }
