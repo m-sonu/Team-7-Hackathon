@@ -6,7 +6,7 @@ use App\Http\Controllers\API\BillUploadBatchController;
 use App\Http\Controllers\API\SocialiteController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\VerifyBillController;
-use App\Models\Category;
+use App\Http\Controllers\API\CategoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -25,27 +25,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
     Route::get('/bills/{bill}/file', [BillController::class, 'viewFile'])->name('bills.file');
     Route::get('/batches/{batch}/preview', [BillUploadBatchController::class, 'preview'])->name('batches.preview');
+   
+   //Admin/Emplyee details only
+    Route::middleware(['user.or.admin'])->group(function () {
+        Route::get('user/{id}/bills', [UserController::class, 'getUserBills']);
+        Route::get('user/bill/{id}', [UserController::class, 'getUserBillsDetails']);
+    });
 
-    // Employee dashboard
-    Route::get('/user/{id}/dashboard', [UserController::class, 'employeeDashboard']);
-    Route::get('user/{id}/bills', [UserController::class, 'getUserBills']);
-    Route::get('user/bill/{id}', [UserController::class, 'getUserBillsDetails']);
+     // Employee dashboard
+     Route::middleware(['employee'])->group(function () {
+        Route::get('/user/{id}/dashboard', [UserController::class, 'employeeDashboard']);
+        Route::post('/batches/{batch}/submit', [BillController::class, 'submitBatch'])->name('batches.submit');
 
-    // Admin dashboard
-    Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
-
-    // Bill Submission (Normal User)
-    Route::post('/batches/{batch}/submit', [BillController::class, 'submitBatch'])->name('batches.submit');
+    });
 
     // Admin Bill Verification
     Route::prefix('admin')->middleware('admin')->group(function () {
         Route::post('/bills/{bill}/verify', [VerifyBillController::class, 'verifyBill']);
         Route::post('/bills/{pivotId}/bulk-reimburse', [VerifyBillController::class, 'bulkReimburse']);
+         Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
     });
 
-    Route::get('/categories', function () {
-        return response()->json([
-            'data' => Category::where('is_active', true)->get(['id', 'name']),
-        ]);
-    });
+    //Category
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/categoryWiseBills/{userId}/{categoryId}',[CategoryController::class,'getUserCategoryWiseBillDetails']);
+    Route::get('/categoryWiseBills/{userId}',[CategoryController::class,'getUserCategoryWiseBills']);
 });

@@ -4,7 +4,7 @@ namespace App\Enums;
 
 enum Currency: string
 {
-    case NPR = 'NPR';
+    case NRP = 'NRP';
     case YEN = 'YEN';
     case USD = 'USD';
 

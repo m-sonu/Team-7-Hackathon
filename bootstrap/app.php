@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\EmployeeMiddleware;
+use App\Http\Middleware\EnsureUserOrAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -27,6 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => AdminMiddleware::class,
+            'employee' => EmployeeMiddleware::class,
+            'user.or.admin' => EnsureUserOrAdmin::class,
+
         ]);
     })
     ->withMiddleware(function (Middleware $middleware) {

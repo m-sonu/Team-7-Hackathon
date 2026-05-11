@@ -14,12 +14,13 @@ class BillResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+  
         return [
             'id' => $this->id,
             'bill_no' => $this->bill_no,
             'vat_no' => $this->vat_no,
-            'amount' => \format_currency($this->amount ?? 0, $this->billUploadBatch->currency),
-            'approved_amount' => \format_currency($this->approve_amount ?? 0, $this->billUploadBatch->currency),
+            'amount' => format_currency($this->amount ?? 0, $this->billUploadBatch->currency),
+            'approved_amount' => format_currency($this->approve_amount ?? 0, $this->billUploadBatch->currency),
             'status' => $this->status,
             'is_valid' => $this->is_valid ?? true,
             'validation_error' => $this->validation_error,
