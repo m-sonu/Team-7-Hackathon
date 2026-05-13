@@ -167,27 +167,24 @@ class UserController extends Controller
 
     public function getEmployeeBills(EmployeeUserBillsRequest $request)
     {
-        $month = $request->month ?? now()->month;
-        $year = now()->year;
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate   = Carbon::parse($request->end_date)->endOfDay();
+            $month     = (int) $startDate->month;
+            $year      = (int) $startDate->year;
+        } else {
+            $month  = $request->month ?? now()->month;
+            $year   = now()->year;
+            $date   = Carbon::create($year, $month, 1);
+            $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
+            $endDate   = $date->copy()->day(25)->endOfDay();
+        }
 
-        $selectedMonth = Carbon::create($year, $month, 1);
-
-        $startDate = $selectedMonth->copy()
-            ->subMonth()
-            ->day(26)
-            ->startOfDay();
-
-        $endDate = $selectedMonth->copy()
-            ->day(25)
-            ->endOfDay();
-
-        $users = Bill::query()
+        $paginator = Bill::query()
             ->join('users', 'users.id', '=', 'bill.user_id')
             ->leftJoin('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
             ->where('users.role', UserRole::EMPLOYEE->value)
             ->whereBetween('bill.created_at', [$startDate, $endDate])
-
-            // status filter (optional)
             ->when($request->filled('status'), function ($q) use ($request) {
                 $q->where('bill.status', $request->status);
             })
@@ -203,15 +200,31 @@ class UserController extends Controller
                 DB::raw('COUNT(bill.id) as bills_count'),
             ])
             ->latest('users.id')
-            ->paginate($request->per_page ?? 10);
+            ->paginate($request->per_page ?? 15);
 
         return response()->json([
-            'success' => true,
-            'month' => $month,
-            'year' => $year,
+            'success'    => true,
+            'month'      => $month,
+            'year'       => $year,
             'start_date' => $startDate->toDateString(),
-            'end_date' => $endDate->toDateString(),
-            'data' => EmployeeBillResource::collection($users),
+            'end_date'   => $endDate->toDateString(),
+            'data'       => [
+                'data'  => EmployeeBillResource::collection($paginator)->resolve(),
+                'meta'  => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page'    => $paginator->lastPage(),
+                    'per_page'     => $paginator->perPage(),
+                    'total'        => $paginator->total(),
+                    'from'         => $paginator->firstItem(),
+                    'to'           => $paginator->lastItem(),
+                ],
+                'links' => [
+                    'first' => $paginator->url(1),
+                    'last'  => $paginator->url($paginator->lastPage()),
+                    'prev'  => $paginator->previousPageUrl(),
+                    'next'  => $paginator->nextPageUrl(),
+                ],
+            ],
         ]);
     }
 }
