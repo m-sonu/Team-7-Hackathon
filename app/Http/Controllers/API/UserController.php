@@ -102,12 +102,16 @@ class UserController extends Controller
                 'message' => 'User not found',
             ], 404);
         }
-        $month = $request->input('month', Carbon::now()->month);
+
         $batches = BillUploadBatch::query()
             ->with(['category'])
             ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
             ->withSum('bills as bills_sum_amount', 'amount')
             ->withCount('bills')
+            ->withCount(['bills as bills_count_pending'  => fn ($q) => $q->where('status', BillStatus::PENDING->value)])
+            ->withCount(['bills as bills_count_verified' => fn ($q) => $q->where('status', BillStatus::VERIFIED->value)])
+            ->withCount(['bills as bills_count_paid'     => fn ($q) => $q->where('status', BillStatus::REIMBURSED->value)])
+            ->withCount(['bills as bills_count_rejected' => fn ($q) => $q->where('status', BillStatus::REJECTED->value)])
             ->where('user_id', $user->id)
             ->when(
                 $request->filled('category_id'),
@@ -115,20 +119,24 @@ class UserController extends Controller
             )
             ->when(
                 $request->filled('status'),
-                fn ($q) => $q->whereHas(
-                    'bills',
-                    fn ($b) => $b->where('status', $request->status)
-                )
+                fn ($q) => $q->whereHas('bills', fn ($b) => $b->where('status', $request->status))
             )
-            ->when($month, function ($q) use ($request, $month) {
-                $year = $request->input('year', now()->year);
-                $date = Carbon::create($year, $month, 1);
+            ->when(
+                $request->filled('start_date') && $request->filled('end_date'),
+                fn ($q) => $q->whereBetween('created_at', [
+                    Carbon::parse($request->start_date)->startOfDay(),
+                    Carbon::parse($request->end_date)->endOfDay(),
+                ]),
+                function ($q) use ($request) {
+                    $month = $request->input('month', Carbon::now()->month);
+                    $year = $request->input('year', now()->year);
+                    $date = Carbon::create($year, $month, 1);
+                    $start = $date->copy()->subMonth()->day(26)->startOfDay();
+                    $end = $date->copy()->day(25)->endOfDay();
 
-                $start = $date->copy()->subMonth()->day(26)->startOfDay();
-                $end = $date->copy()->day(25)->endOfDay();
-
-                $q->whereBetween('created_at', [$start, $end]);
-            })
+                    return $q->whereBetween('created_at', [$start, $end]);
+                }
+            )
             ->orderByDesc('created_at')
             ->paginate($request->input('per_page', 15));
 

@@ -25,7 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
     Route::get('/bills/{bill}/file', [BillController::class, 'viewFile'])->name('bills.file');
     Route::get('/batches/{batch}/preview', [BillUploadBatchController::class, 'preview'])->name('batches.preview');
-   
+
    //Admin/Emplyee details only
     Route::middleware(['user.or.admin'])->group(function () {
         Route::get('user/{id}/bills', [UserController::class, 'getUserBills']);
