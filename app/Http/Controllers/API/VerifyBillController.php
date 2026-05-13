@@ -37,11 +37,14 @@ class VerifyBillController extends Controller
         $endDate = $date->copy()->day(25)->endOfDay();
 
         $categoryLimit = $bill->category->limit;
-        $alreadyApproved = Bill::where('user_id', $bill->user_id)
+        $query = Bill::where('user_id', $bill->user_id)
             ->where('category_id', $bill->category_id)
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->where('id', '!=', $bill->id)
-            ->sum('approve_amount');
+            ->where('id', '!=', $bill->id);
+
+        $alreadyApproved = $query->sum('approve_amount');
+        $totalAmount = $query->sum('amount');
+
 
         $remainingLimit = max($categoryLimit - $alreadyApproved, 0);
         if ($remainingLimit <= 0) {
@@ -55,6 +58,8 @@ class VerifyBillController extends Controller
                 'success' => false,
                 'message' => 'Bill limit is reached.',
                 'remaining_category_amount' => format_currency(0, $currency),
+                'already_approved' => format_currency($alreadyApproved, $currency),
+                'total_amount' => format_currency($totalAmount, $currency),
             ], 422);
         
         }
@@ -66,14 +71,16 @@ class VerifyBillController extends Controller
             'approve_amount' => $finalApprovedAmount,
             'reason_for_action' => $request->reason_for_action,
         ]);
-
         $currency = $bill->billUploadBatch?->currency ?? '';
+        $approve_amount = $alreadyApproved + $finalApprovedAmount;
 
         return response()->json([
             'message' => "Bill has been {$request->status}.",
             'currency' => $currency,
             'final_approve_amount' => format_currency($finalApprovedAmount,$currency),
-            'remaining_category_amount' => format_currency(max($remainingLimit - $finalApprovedAmount, 0),$currency)
+            'remaining_category_amount' => format_currency(max($remainingLimit - $finalApprovedAmount, 0),$currency),
+            'approve_amount' => format_currency($approve_amount, $currency),
+            'total_amount' => format_currency($totalAmount, $currency),
         ]);
     }
 
