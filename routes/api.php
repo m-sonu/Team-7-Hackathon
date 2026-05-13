@@ -18,7 +18,7 @@ Route::post('/auth/{provider}/callback', [SocialiteController::class, 'callback'
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user/{id}', [UserController::class, 'show']);
+    Route::get('/user/show/{id}', [UserController::class, 'show']);
 
     Route::get('/bills/claimable-amount', [BillController::class, 'getClaimableAmount']);
     Route::apiResource('bills', BillController::class);

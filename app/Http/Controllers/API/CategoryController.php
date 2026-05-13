@@ -35,19 +35,15 @@ class CategoryController extends Controller
         ->where('category_id', $categoryId)
         ->whereBetween('created_at', [$startDate, $endDate])
         ->get();
-
+        $currency = $bills->first()?->billUploadBatch?->currency;
+   
     return response()->json([
         'success' => true,
-        'user_id' => $userId,
-        'category_id' => $categoryId,
-        'period' => [
-            'start_date' => $startDate->format('Y-m-d'),
-            'end_date' => $endDate->format('Y-m-d'),
-        ],
-        'total_amount' => $bills->sum('amount'),
+        'total_amount' => format_currency($bills->sum('amount'), $currency ?? ''),
+        'approve_amount' => format_currency($bills->sum('approve_amount'), $currency ?? ''),
         'bill_count' => $bills->count(),
-
         'data' => BillResource::collection($bills),
+    
     ]);
 }
 
