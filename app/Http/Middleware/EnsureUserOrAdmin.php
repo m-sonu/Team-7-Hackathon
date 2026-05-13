@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Enums\UserRole;
+use App\Models\BillUploadBatch;
 
 class EnsureUserOrAdmin
 {
@@ -19,16 +20,21 @@ class EnsureUserOrAdmin
         if ($authUser && $authUser->role === UserRole::ADMIN) {
             return $next($request);
         }
+        if ($request->route('user')) {
+            $userId = (int) $request->route('user');
 
-        // check user id from route
-        $routeBillId = $request->route('id');
-        $billUserId = BillUploadBatch::where('id', $routeBillId)->value('user_id');
-
-        // allow only own data
-        if ($authUser && (int) $authUser->id === (int) $billUserId) {
-            return $next($request);
+            if ($authUser->id === $userId) {
+                return $next($request);
+            }
         }
+        if ($request->route('id')) {
+             $billId = $request->route('id');
+            $billUserId = BillUploadBatch::where('id', $billId)->value('user_id');
 
+            if ($authUser->id === (int) $billUserId) {
+                return $next($request);
+            }
+        }
         return response()->json([
             'message' => 'Unauthorized access'
         ], 403);

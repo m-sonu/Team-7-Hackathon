@@ -28,7 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
    //Admin/Emplyee details only
     Route::middleware(['user.or.admin'])->group(function () {
-        Route::get('user/{id}/bills', [UserController::class, 'getUserBills']);
+        Route::get('user/{user}/bills', [UserController::class, 'getUserBills']);
         Route::get('user/bill/{id}', [UserController::class, 'getUserBillsDetails']);
     });
 
