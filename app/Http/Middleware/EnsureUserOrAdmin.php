@@ -21,10 +21,11 @@ class EnsureUserOrAdmin
         }
 
         // check user id from route
-        $routeUserId = $request->route('id');
+        $routeBillId = $request->route('id');
+        $billUserId = BillUploadBatch::where('id', $routeBillId)->value('user_id');
 
         // allow only own data
-        if ($authUser && (int) $authUser->id === (int) $routeUserId) {
+        if ($authUser && (int) $authUser->id === (int) $billUserId) {
             return $next($request);
         }
 
