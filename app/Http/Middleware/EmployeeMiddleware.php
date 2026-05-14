@@ -20,6 +20,6 @@ class EmployeeMiddleware
             return $next($request);
         }
 
-        return response()->json(['message' => 'Unauthorized. Employee access required.'], 403);
+        return response()->json(['success'=>false,'message' => 'Unauthorized. Employee access required.'], 403);
     }
 }

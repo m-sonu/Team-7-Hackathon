@@ -13,3 +13,16 @@ if (! function_exists('format_currency')) {
         };
     }
 }
+
+if (! function_exists('pagination_response')) {
+    function pagination_response($data)
+    {
+      return [
+        'current_page' => $data->currentPage(),
+        'last_page' => $data->lastPage(),
+        'total' => $data->total(),
+         'next' => $data->nextPageUrl(),
+        'prev' => $data->previousPageUrl(),
+      ];
+    }
+}

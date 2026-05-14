@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\EmployeeUserBillsRequest;
 use App\Http\Resources\BillUploadBatchDetailResource;
 use App\Http\Resources\BillUploadBatchResource;
+use App\Http\Resources\BillResource;
 use App\Http\Resources\EmployeeBillResource;
 use App\Http\Resources\EmployeeDashboardResource;
 use App\Http\Resources\UserResource;
@@ -77,20 +78,26 @@ class UserController extends Controller
             ->select([
                 'category.id as category_id',
                 'category.name as category',
+                'batch.currency as currency',
                 DB::raw('SUM(bill.approve_amount) as approved_amount'),
                 DB::raw('SUM(bill.amount) as total_amount'),
                 DB::raw('COUNT(bill.id) as bill_count'),
             ])
-            ->groupBy('category.id', 'category.name')
-            ->get();
+            ->groupBy('category.id', 'category.name','batch.currency')
+            ->paginate(10);
 
-        $data = [
-            'stats' => $stats,
-            'currency' => $currency,
-            'category_wise_amounts' => $categoryWiseAmounts,
-        ];
+return response()->json([
+    'success' => true,
+    'message' => 'Employee dashboard fetched',
+    'total_bills' => (int) $stats->total_bills,
+    'total_approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
+    'amount' => format_currency($stats->total_amount ?? 0, $currency),
+    'approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
+    'current_month_verified_bills' => (int) $stats->verified_bills_count,
+    'data' => EmployeeDashboardResource::collection($categoryWiseAmounts),
+   'meta' => pagination_response($categoryWiseAmounts),
+]);
 
-        return new EmployeeDashboardResource($data);
     }
 
     public function getUserBills(Request $request, $id)
@@ -138,49 +145,69 @@ class UserController extends Controller
                 }
             )
             ->orderByDesc('created_at')
-            ->paginate($request->input('per_page', 15));
+            ->paginate($request->input('per_page', 10));
 
-        return BillUploadBatchResource::collection($batches);
-    }
-
-    public function getUserBillsDetails(Request $request, $id)
-    {
-        $batch = BillUploadBatch::with([
-            'category',
-            'bills' => function ($q) {
-                $q->with('billUploadBatch')
-                    ->with('vendorContact');
-            },
-        ])
-            ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
-            ->find($id);
-
-        if (! $batch) {
             return response()->json([
-                'success' => false,
-                'message' => 'Batch not found',
-            ], 404);
-        }
-
-        return new BillUploadBatchDetailResource($batch);
+        'success' => true,
+        'message' => 'User bills fetched successfully',
+        'data' => BillUploadBatchResource::collection($batches),
+        'meta' => pagination_response($batches),
+    ]);
     }
+public function getUserBillsDetails(Request $request, $id)
+{
+    $perPage = $request->input('per_page', 10);
+
+    // 1. Batch details (NO bills eager loading)
+    $batch = BillUploadBatch::with('category')
+        ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
+        ->find($id);
+
+    if (! $batch) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Batch not found',
+        ], 404);
+    }
+
+    // 2. Paginated bills
+    $bills = Bill::where('bill_upload_batch_id', $id)
+        ->with(['billUploadBatch', 'vendorContact'])
+        ->latest()
+        ->paginate($perPage);
+
+    // 3. Response
+    return response()->json([
+        'success' => true,
+        'message' => 'Bills details fetched successfully',
+            'id' => $batch->id,
+            'title' => $batch->title,
+            'category' => $batch->category?->name,
+            'created_date' => $batch->created_at->format('M d y'),
+            'approved_amount' => format_currency(
+                $batch->bills_sum_approve_amount ?? 0,
+                $batch->currency
+            ),
+            'data' => BillResource::collection($bills),
+            'meta' => pagination_response($bills),
+    ]);
+}
 
     public function getEmployeeBills(EmployeeUserBillsRequest $request)
     {
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $startDate = Carbon::parse($request->start_date)->startOfDay();
-            $endDate   = Carbon::parse($request->end_date)->endOfDay();
-            $month     = (int) $startDate->month;
-            $year      = (int) $startDate->year;
-        } else {
-            $month  = $request->month ?? now()->month;
-            $year   = now()->year;
-            $date   = Carbon::create($year, $month, 1);
-            $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
-            $endDate   = $date->copy()->day(25)->endOfDay();
-        }
+        $month = $request->month ?? now()->month;
+        $year = now()->year;
+        $selectedMonth = Carbon::create($year, $month, 1);
+        $startDate = $selectedMonth->copy()
+            ->subMonth()
+            ->day(26)
+            ->startOfDay();
 
-        $paginator = Bill::query()
+        $endDate = $selectedMonth->copy()
+            ->day(25)
+            ->endOfDay();
+
+        $users = Bill::query()
             ->join('users', 'users.id', '=', 'bill.user_id')
             ->leftJoin('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
             ->where('users.role', UserRole::EMPLOYEE->value)
@@ -203,28 +230,14 @@ class UserController extends Controller
             ->paginate($request->per_page ?? 15);
 
         return response()->json([
-            'success'    => true,
-            'month'      => $month,
-            'year'       => $year,
+            'success' => true,
+            'message'=>"employee bills fetched successfully",
+            'month' => $month,
+            'year' => $year,
             'start_date' => $startDate->toDateString(),
-            'end_date'   => $endDate->toDateString(),
-            'data'       => [
-                'data'  => EmployeeBillResource::collection($paginator)->resolve(),
-                'meta'  => [
-                    'current_page' => $paginator->currentPage(),
-                    'last_page'    => $paginator->lastPage(),
-                    'per_page'     => $paginator->perPage(),
-                    'total'        => $paginator->total(),
-                    'from'         => $paginator->firstItem(),
-                    'to'           => $paginator->lastItem(),
-                ],
-                'links' => [
-                    'first' => $paginator->url(1),
-                    'last'  => $paginator->url($paginator->lastPage()),
-                    'prev'  => $paginator->previousPageUrl(),
-                    'next'  => $paginator->nextPageUrl(),
-                ],
-            ],
+            'end_date' => $endDate->toDateString(),
+            'data' => EmployeeBillResource::collection($users),
+            'meta' => pagination_response($users),
         ]);
     }
 }

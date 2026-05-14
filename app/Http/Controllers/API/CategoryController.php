@@ -18,7 +18,12 @@ class CategoryController extends Controller
         $category = Category::select('id', 'name', 'monthly_limit','is_active')
             -> orderBy('name','asc')
             ->paginate(10);
-        return CategoryResource::collection($category);
+             return response()->json([
+        'success' => true,
+        'message' => 'Category fetched successfully',
+        'data' => CategoryResource::collection($category),
+        'meta' => pagination_response($category),
+    ]);
     }
     public function getUserCategoryWiseBillDetails(Request $request, $userId, $categoryId)
 {
@@ -34,16 +39,17 @@ class CategoryController extends Controller
         ->where('user_id', $userId)
         ->where('category_id', $categoryId)
         ->whereBetween('created_at', [$startDate, $endDate])
-        ->get();
+        ->paginate(10);
         $currency = $bills->first()?->billUploadBatch?->currency;
    
     return response()->json([
         'success' => true,
+        'message' => "Category wise bills details fetched successfully",
         'total_amount' => format_currency($bills->sum('amount'), $currency ?? ''),
         'approve_amount' => format_currency($bills->sum('approve_amount'), $currency ?? ''),
         'bill_count' => $bills->count(),
         'data' => BillResource::collection($bills),
-    
+        'meta' => pagination_response($bills),
     ]);
 }
 
@@ -56,7 +62,7 @@ public function getUserCategoryWiseBills(Request $request, $userId)
 
     $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
     $endDate = $date->copy()->day(25)->endOfDay();
- $results = DB::select("
+    $results = DB::select("
     WITH base AS (
         SELECT *
         FROM bill
@@ -121,6 +127,7 @@ public function getUserCategoryWiseBills(Request $request, $userId)
 
     return response()->json([
         'success' => true,
+        'message' => 'User category wise bills fetched successfully',
         'user_id' => $userId,
         'period' => [
             'start_date' => $startDate->format('Y-m-d'),
