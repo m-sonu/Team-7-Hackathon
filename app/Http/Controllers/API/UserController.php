@@ -150,9 +150,16 @@ class UserController extends Controller
                     Carbon::parse($request->end_date)->endOfDay(),
                 ]),
                 function ($q) use ($request) {
-                    $month = $request->input('month', Carbon::now()->month);
-                    $year = $request->input('year', now()->year);
-                    $date = Carbon::create($year, $month, 1);
+                    $monthInput = $request->input('month');
+                    if ($monthInput && str_contains((string) $monthInput, '-')) {
+                        $date = Carbon::createFromFormat('Y-m', $monthInput)->startOfMonth();
+                    } else {
+                        $date = Carbon::create(
+                            $request->input('year', now()->year),
+                            $monthInput ?? Carbon::now()->month,
+                            1
+                        );
+                    }
                     $start = $date->copy()->subMonth()->day(26)->startOfDay();
                     $end = $date->copy()->day(25)->endOfDay();
 

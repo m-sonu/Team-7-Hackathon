@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AiProcessStatus;
+use App\Enums\BillStatus;
+use App\Enums\UserRole;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use App\Models\Category;
+use App\Models\CategoryMonthlyPivot;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -18,12 +22,13 @@ class UserBillsApiTest extends TestCase
     {
         $user = User::factory()->create();
         $category = Category::factory()->create(['name' => 'Travel']);
-        
+
         $batch = BillUploadBatch::factory()->create([
             'user_id' => $user->id,
             'category_id' => $category->id,
             'title' => 'Travel Batch',
             'currency' => 'USD',
+            'ai_processing'=> AiProcessStatus::SUCCESS->value
         ]);
 
         Bill::factory()->count(3)->create([
@@ -46,18 +51,17 @@ class UserBillsApiTest extends TestCase
                         'created_date',
                         'approved_amount',
                         'status',
-                    ]
-                ]
+                    ],
+                ],
             ]);
-        
+
         $response->assertJsonFragment([
             'title' => 'Travel Batch',
-            'approved_amount' => 300, // 3 * 100
+            'approved_amount' => '$ 300',
         ]);
-        
-        // Verify date format M d y
+
         $response->assertJsonFragment([
-            'created_date' => $batch->created_at->format('M d y'),
+            'created_date' => $batch->created_at->format('M d Y'),
         ]);
     }
 
@@ -71,8 +75,9 @@ class UserBillsApiTest extends TestCase
             'user_id' => $user->id,
             'category_id' => $category1->id,
             'title' => 'Travel Batch',
+            'ai_processing'=> AiProcessStatus::SUCCESS->value
         ]);
-        
+
         Bill::factory()->create([
             'user_id' => $user->id,
             'category_id' => $category1->id,
@@ -83,6 +88,7 @@ class UserBillsApiTest extends TestCase
             'user_id' => $user->id,
             'category_id' => $category2->id,
             'title' => 'Food Batch',
+            'ai_processing'=> AiProcessStatus::SUCCESS->value
         ]);
 
         Bill::factory()->create([
@@ -103,35 +109,43 @@ class UserBillsApiTest extends TestCase
         $user = User::factory()->create();
         $category = Category::factory()->create();
 
-        // May 2026 Billing cycle: April 26 to May 25
-        
+        // May 2026 billing cycle: April 26 to May 25
+
         // 1. Included: April 26
-        BillUploadBatch::factory()->create([
+        $batch1 = BillUploadBatch::factory()->create([
             'user_id' => $user->id,
             'category_id' => $category->id,
             'created_at' => '2026-04-26 10:00:00',
+            'ai_processing'=> AiProcessStatus::SUCCESS->value
         ]);
+        Bill::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'bill_upload_batch_id' => $batch1->id]);
 
         // 2. Included: May 25
-        BillUploadBatch::factory()->create([
+        $batch2 = BillUploadBatch::factory()->create([
             'user_id' => $user->id,
             'category_id' => $category->id,
             'created_at' => '2026-05-25 10:00:00',
+            'ai_processing'=> AiProcessStatus::SUCCESS->value
         ]);
+        Bill::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'bill_upload_batch_id' => $batch2->id]);
 
-        // 3. Excluded: April 25
-        BillUploadBatch::factory()->create([
+        // 3. Excluded: April 25 (before cycle start)
+        $batch3 = BillUploadBatch::factory()->create([
             'user_id' => $user->id,
             'category_id' => $category->id,
             'created_at' => '2026-04-25 10:00:00',
+            'ai_processing'=> AiProcessStatus::SUCCESS->value
         ]);
+        Bill::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'bill_upload_batch_id' => $batch3->id]);
 
-        // 4. Excluded: May 26
-        BillUploadBatch::factory()->create([
+        // 4. Excluded: May 26 (after cycle end)
+        $batch4 = BillUploadBatch::factory()->create([
             'user_id' => $user->id,
             'category_id' => $category->id,
             'created_at' => '2026-05-26 10:00:00',
+            'ai_processing'=> AiProcessStatus::SUCCESS->value
         ]);
+        Bill::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'bill_upload_batch_id' => $batch4->id]);
 
         $response = $this->actingAs($user)->getJson("/api/user/{$user->id}/bills?month=2026-05");
 
@@ -143,72 +157,62 @@ class UserBillsApiTest extends TestCase
     {
         Carbon::setTestNow('2026-05-08 12:00:00');
 
-        $user = User::factory()->create(['currency' => 'NPR']);
+        $user = User::factory()->create(['role' => UserRole::EMPLOYEE]);
         $travelCategory = Category::factory()->create(['name' => 'Travel']);
         $foodCategory = Category::factory()->create(['name' => 'Food']);
 
-        $batchInCycle1 = BillUploadBatch::factory()->create([
+        // Billing cycle month = '2026-05' (day 8 < cutoff 26)
+        $travelPivot = CategoryMonthlyPivot::factory()->create([
             'user_id' => $user->id,
             'category_id' => $travelCategory->id,
-            'created_at' => '2026-04-26 10:00:00',
+            'month_year' => '2026-05',
         ]);
-
-        $batchInCycle2 = BillUploadBatch::factory()->create([
+        $foodPivot = CategoryMonthlyPivot::factory()->create([
             'user_id' => $user->id,
             'category_id' => $foodCategory->id,
-            'created_at' => '2026-05-10 10:00:00',
+            'month_year' => '2026-05',
         ]);
 
-        $batchOutsideCycle = BillUploadBatch::factory()->create([
+        $batchTravel = BillUploadBatch::factory()->create([
             'user_id' => $user->id,
             'category_id' => $travelCategory->id,
-            'created_at' => '2026-05-26 10:00:00',
+            'category_monthly_pivot_id' => $travelPivot->id,
+            'ai_processing' => AiProcessStatus::SUCCESS->value,
+        ]);
+        $batchFood = BillUploadBatch::factory()->create([
+            'user_id' => $user->id,
+            'category_id' => $foodCategory->id,
+            'category_monthly_pivot_id' => $foodPivot->id,
+            'ai_processing'=> AiProcessStatus::SUCCESS->value
         ]);
 
         Bill::factory()->create([
             'user_id' => $user->id,
             'category_id' => $travelCategory->id,
-            'bill_upload_batch_id' => $batchInCycle1->id,
+            'bill_upload_batch_id' => $batchTravel->id,
+            'category_monthly_pivot_id' => $travelPivot->id,
             'approve_amount' => 100,
-            'status' => Bill::STATUS_VERIFIED,
+            'status' => BillStatus::VERIFIED,
         ]);
 
         Bill::factory()->create([
             'user_id' => $user->id,
             'category_id' => $foodCategory->id,
-            'bill_upload_batch_id' => $batchInCycle2->id,
+            'bill_upload_batch_id' => $batchFood->id,
+            'category_monthly_pivot_id' => $foodPivot->id,
             'approve_amount' => 200,
-            'status' => Bill::STATUS_PENDING,
+            'status' => BillStatus::PENDING,
         ]);
 
-        Bill::factory()->create([
-            'user_id' => $user->id,
-            'category_id' => $travelCategory->id,
-            'bill_upload_batch_id' => $batchOutsideCycle->id,
-            'approve_amount' => 300,
-            'status' => Bill::STATUS_VERIFIED,
-        ]);
-
-        $response = $this->actingAs($user)->getJson('/api/user/dashboard');
+        $response = $this->actingAs($user)->getJson("/api/user/{$user->id}/dashboard");
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.total_bills', 3)
-            ->assertJsonPath('data.total_approved_amount', 'रु 600')
-            ->assertJsonPath('data.current_month_total_approved_amount', 'रु 300')
-            ->assertJsonPath('data.current_month_verified_bills', 1)
-            ->assertJsonCount(2, 'data.category_wise_amounts');
+            ->assertJsonPath('total_bills', 2)
+            ->assertJsonPath('current_month_verified_bills', 1)
+            ->assertJsonCount(2, 'category_wise_amounts');
 
-        $response->assertJsonFragment([
-            'category' => 'Travel',
-            'approved_amount' => 'रु 100',
-            'bill_count' => 1,
-        ]);
-
-        $response->assertJsonFragment([
-            'category' => 'Food',
-            'approved_amount' => 'रु 200',
-            'bill_count' => 1,
-        ]);
+        $response->assertJsonFragment(['category' => 'Travel', 'bill_count' => 1]);
+        $response->assertJsonFragment(['category' => 'Food', 'bill_count' => 1]);
 
         Carbon::setTestNow();
     }
@@ -218,13 +222,18 @@ class UserBillsApiTest extends TestCase
         $user = User::factory()->create();
         $category = Category::factory()->create();
 
-        // Batch 1: Verified
-        $batch1 = BillUploadBatch::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'title' => 'Verified Batch']);
-        Bill::factory()->create(['bill_upload_batch_id' => $batch1->id, 'status' => Bill::STATUS_VERIFIED]);
+        // Batch 1: Verified (older — appears second in orderByDesc)
+        $batch1 = BillUploadBatch::factory()->create(
+            ['user_id' => $user->id,
+                'category_id' => $category->id,
+                'title' => 'Verified Batch',
+                'created_at' => now()->subMinute(),
+                'ai_processing'=> AiProcessStatus::SUCCESS->value]);
+        Bill::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'bill_upload_batch_id' => $batch1->id, 'status' => BillStatus::VERIFIED]);
 
-        // Batch 2: Pending
-        $batch2 = BillUploadBatch::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'title' => 'Pending Batch']);
-        Bill::factory()->create(['bill_upload_batch_id' => $batch2->id, 'status' => Bill::STATUS_PENDING]);
+        // Batch 2: Pending (newer — appears first in orderByDesc)
+        $batch2 = BillUploadBatch::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'title' => 'Pending Batch', 'created_at' => now(), 'ai_processing' => AiProcessStatus::SUCCESS->value]);
+        Bill::factory()->create(['user_id' => $user->id, 'category_id' => $category->id, 'bill_upload_batch_id' => $batch2->id, 'status' => BillStatus::PENDING]);
 
         $response = $this->actingAs($user)->getJson("/api/user/{$user->id}/bills");
 

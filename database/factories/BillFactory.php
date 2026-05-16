@@ -14,7 +14,7 @@ use App\Enums\BillStatus;
 class BillFactory extends Factory
 {
     /**
-     * Define the model's default state.aaaa
+     * Define the model's default state.
      *
      * @return array<string, mixed>
      */
@@ -29,9 +29,9 @@ class BillFactory extends Factory
             'approve_amount' => function (array $attributes) {
                 return $attributes['amount'];
             },
-            'status' => $this->faker->randomElement([BillStatus::VERIFIED, BillStatus::INVALID, BillStatus::REJECTED, BillStatus::REIMBURSED]),
+            'status' => BillStatus::PENDING,
             'raw_text' => fake()->paragraph(),
-            'category_monthly_pivot_id' => null, // Will be set in seeder
+            'category_monthly_pivot_id' => null,
         ];
     }
 }
