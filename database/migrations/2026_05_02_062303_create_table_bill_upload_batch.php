@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AiProcessStatus;
 use App\Models\BillUploadBatch;
 use App\Models\Category;
 use App\Models\CategoryMonthlyPivot;
@@ -16,7 +17,8 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->string('currency', 10)->default('NRP');
-
+            $table->enum('ai_processing', AiProcessStatus::all())
+                ->default(AiProcessStatus::PROCESSING->value);
             // Link to the user
             $table->foreignId('user_id')->constrained(User::TABLE_NAME)->onDelete('cascade');
 
@@ -27,9 +29,6 @@ return new class extends Migration
                 ->nullable()
                 ->constrained(CategoryMonthlyPivot::TABLE_NAME)
                 ->onDelete('set null');
-
-            $table->boolean('ai_processing')->default(true);
-
             $table->timestamps();
         });
     }

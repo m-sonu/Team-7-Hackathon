@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AiProcessStatus;
 use App\Models\BillUploadBatch;
 use App\Models\Category;
 use App\Models\User;
@@ -25,7 +26,7 @@ class BillUploadBatchFactory extends Factory
             'user_id' => User::factory(),
             'category_id' => Category::factory(),
             'category_monthly_pivot_id' => null,
-            'ai_processing' => $this->faker->boolean(),
+            'ai_processing' => $this->faker->randomElement(AiProcessStatus::all()),
         ];
     }
 }

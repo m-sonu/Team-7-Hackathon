@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Enums\AiProcessStatus;
 use App\Enums\BillStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmployeeUserBillsRequest;
@@ -13,6 +14,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use App\Models\Category;
+use App\Models\CategoryMonthlyPivot;
 use App\Models\User;
 use App\Services\AdminBillService;
 use Illuminate\Http\JsonResponse;
@@ -49,35 +51,44 @@ class UserController extends Controller
             return response()->json(['success' => false, 'message' => 'User not found'], 404);
         }
 
-        // 1. Setup Date Range (26th of last month to 25th of current month)
+        // Resolve the current billing cycle month_year using the same logic as BillUploadBatchService
         $now = Carbon::now();
-        $start = $now->copy()->subMonth()->day(26)->startOfDay();
-        $end = $now->copy()->day(25)->endOfDay();
+        $cutoff = config('app.billing_cutoff', 26);
+        $billingMonth = $now->copy();
+        if ($billingMonth->day >= $cutoff) {
+            $billingMonth->addMonth();
+        }
+        $monthYear = $billingMonth->format('Y-m');
 
-        // 2. Optimization: Get primary stats in a single query from the Bill model
-        // We join the batch to filter by the batch's creation date as per your original logic
-        $stats = Bill::where('bill.user_id', $user->id)
-            ->join('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
-            ->whereBetween('batch.created_at', [$start, $end])
+        // Fetch all pivot IDs for this user in the current billing cycle.
+        // Bills are scoped to these pivots — no date range join needed.
+        $pivotIds = CategoryMonthlyPivot::where('user_id', $user->id)
+            ->where('month_year', $monthYear)
+            ->pluck('id');
+
+        // Primary stats — scoped by pivot IDs, no batch join required
+        $stats = Bill::where('user_id', $user->id)
+            ->whereIn('category_monthly_pivot_id', $pivotIds)
             ->selectRaw('
-            COUNT(bill.id) as total_bills,
-            SUM(bill.approve_amount) as total_approved_amount,
-             SUM(bill.amount) as total_amount,
-            COUNT(CASE WHEN bill.status = ? THEN 1 END) as verified_bills_count
-        ', [BillStatus::VERIFIED->value])
+                COUNT(id)                                                          AS total_bills,
+                SUM(approve_amount)                                                AS total_approved_amount,
+                SUM(amount)                                                        AS total_amount,
+                COUNT(CASE WHEN status IN (?, ?) THEN 1 END)                       AS verified_bills_count
+            ', [BillStatus::VERIFIED->value, BillStatus::REIMBURSED->value])
             ->first();
 
-        // 3. Get Currency (optimized to one query, latest batch)
+        // Currency from the most recent batch for this user
         $currency = BillUploadBatch::where('user_id', $user->id)
             ->latest()
             ->value('currency') ?? 'NPR';
 
-        // 4. Category Wise Amounts (Cleaned up Join and Selection)
+        // Category-wise amounts — scoped by pivot IDs
         $categoryWiseAmounts = Category::query()
             ->join('bill as bill', 'category.id', '=', 'bill.category_id')
             ->join('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
             ->where('bill.user_id', $user->id)
-            ->whereBetween('batch.created_at', [$start, $end])
+            ->where('batch.ai_processing', AiProcessStatus::SUCCESS->value)
+            ->whereIn('bill.category_monthly_pivot_id', $pivotIds)
             ->select([
                 'category.id as category_id',
                 'category.name as category',
@@ -97,10 +108,9 @@ class UserController extends Controller
             'amount' => format_currency($stats->total_amount ?? 0, $currency),
             'approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
             'current_month_verified_bills' => (int) $stats->verified_bills_count,
-            'data' => EmployeeDashboardResource::collection($categoryWiseAmounts),
+            'category_wise_amounts' => EmployeeDashboardResource::collection($categoryWiseAmounts),
             'meta' => pagination_response($categoryWiseAmounts),
         ]);
-
     }
 
     public function getUserBills(Request $request, $id)
@@ -123,13 +133,15 @@ class UserController extends Controller
             ->withCount(['bills as bills_count_paid' => fn ($q) => $q->where('status', BillStatus::REIMBURSED->value)])
             ->withCount(['bills as bills_count_rejected' => fn ($q) => $q->where('status', BillStatus::REJECTED->value)])
             ->where('user_id', $user->id)
+            ->where('ai_processing', AiProcessStatus::SUCCESS->value)
             ->when(
                 $request->filled('category_id'),
                 fn ($q) => $q->where('category_id', $request->category_id)
             )
             ->when(
                 $request->filled('status'),
-                fn ($q) => $q->whereHas('bills', fn ($b) => $b->where('status', $request->status))
+                fn ($q) => $q->whereHas('bills', fn ($b) => $b->where('status', $request->status)),
+                fn ($q) => $q->whereHas('bills', fn ($b) => $b->whereNot('status', BillStatus::INVALID->value)),
             )
             ->when(
                 $request->filled('start_date') && $request->filled('end_date'),

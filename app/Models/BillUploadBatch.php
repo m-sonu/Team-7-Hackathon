@@ -30,9 +30,7 @@ class BillUploadBatch extends Model
         'ai_processing',
     ];
 
-    protected $casts = [
-        'ai_processing' => 'boolean',
-    ];
+    protected $casts = [];
 
     public function user(): BelongsTo
     {

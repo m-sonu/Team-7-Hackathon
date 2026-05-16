@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\DTOs\StoreBillDTO;
+use App\Enums\AiProcessStatus;
 use App\Enums\BillStatus;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
@@ -39,7 +40,7 @@ class BillUploadBatchService
             'category_monthly_pivot_id' => $pivot->id,
             'title' => $dto->title,
             'currency' => $dto->currency,
-            'ai_processing' => true,
+            'ai_processing' => AiProcessStatus::PROCESSING->value,
         ]);
     }
 
