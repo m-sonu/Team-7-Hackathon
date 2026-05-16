@@ -3,12 +3,10 @@
 namespace App\Http\Controllers\API;
 
 use App\Enums\BillStatus;
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmployeeUserBillsRequest;
-use App\Http\Resources\BillUploadBatchDetailResource;
-use App\Http\Resources\BillUploadBatchResource;
 use App\Http\Resources\BillResource;
+use App\Http\Resources\BillUploadBatchResource;
 use App\Http\Resources\EmployeeBillResource;
 use App\Http\Resources\EmployeeDashboardResource;
 use App\Http\Resources\UserResource;
@@ -16,6 +14,7 @@ use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use App\Models\Category;
 use App\Models\User;
+use App\Services\AdminBillService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -23,6 +22,10 @@ use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private AdminBillService $adminBillService,
+    ) {}
+
     /**
      * Display the specified user.
      */
@@ -83,20 +86,20 @@ class UserController extends Controller
                 DB::raw('SUM(bill.amount) as total_amount'),
                 DB::raw('COUNT(bill.id) as bill_count'),
             ])
-            ->groupBy('category.id', 'category.name','batch.currency')
+            ->groupBy('category.id', 'category.name', 'batch.currency')
             ->paginate(10);
 
-return response()->json([
-    'success' => true,
-    'message' => 'Employee dashboard fetched',
-    'total_bills' => (int) $stats->total_bills,
-    'total_approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
-    'amount' => format_currency($stats->total_amount ?? 0, $currency),
-    'approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
-    'current_month_verified_bills' => (int) $stats->verified_bills_count,
-    'data' => EmployeeDashboardResource::collection($categoryWiseAmounts),
-   'meta' => pagination_response($categoryWiseAmounts),
-]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Employee dashboard fetched',
+            'total_bills' => (int) $stats->total_bills,
+            'total_approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
+            'amount' => format_currency($stats->total_amount ?? 0, $currency),
+            'approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
+            'current_month_verified_bills' => (int) $stats->verified_bills_count,
+            'data' => EmployeeDashboardResource::collection($categoryWiseAmounts),
+            'meta' => pagination_response($categoryWiseAmounts),
+        ]);
 
     }
 
@@ -115,9 +118,9 @@ return response()->json([
             ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
             ->withSum('bills as bills_sum_amount', 'amount')
             ->withCount('bills')
-            ->withCount(['bills as bills_count_pending'  => fn ($q) => $q->where('status', BillStatus::PENDING->value)])
+            ->withCount(['bills as bills_count_pending' => fn ($q) => $q->where('status', BillStatus::PENDING->value)])
             ->withCount(['bills as bills_count_verified' => fn ($q) => $q->where('status', BillStatus::VERIFIED->value)])
-            ->withCount(['bills as bills_count_paid'     => fn ($q) => $q->where('status', BillStatus::REIMBURSED->value)])
+            ->withCount(['bills as bills_count_paid' => fn ($q) => $q->where('status', BillStatus::REIMBURSED->value)])
             ->withCount(['bills as bills_count_rejected' => fn ($q) => $q->where('status', BillStatus::REJECTED->value)])
             ->where('user_id', $user->id)
             ->when(
@@ -147,39 +150,40 @@ return response()->json([
             ->orderByDesc('created_at')
             ->paginate($request->input('per_page', 10));
 
-            return response()->json([
-        'success' => true,
-        'message' => 'User bills fetched successfully',
-        'data' => BillUploadBatchResource::collection($batches),
-        'meta' => pagination_response($batches),
-    ]);
-    }
-public function getUserBillsDetails(Request $request, $id)
-{
-    $perPage = $request->input('per_page', 10);
-
-    // 1. Batch details (NO bills eager loading)
-    $batch = BillUploadBatch::with('category')
-        ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
-        ->find($id);
-
-    if (! $batch) {
         return response()->json([
-            'success' => false,
-            'message' => 'Batch not found',
-        ], 404);
+            'success' => true,
+            'message' => 'User bills fetched successfully',
+            'data' => BillUploadBatchResource::collection($batches),
+            'meta' => pagination_response($batches),
+        ]);
     }
 
-    // 2. Paginated bills
-    $bills = Bill::where('bill_upload_batch_id', $id)
-        ->with(['billUploadBatch', 'vendorContact'])
-        ->latest()
-        ->paginate($perPage);
+    public function getUserBillsDetails(Request $request, $id)
+    {
+        $perPage = $request->input('per_page', 10);
 
-    // 3. Response
-    return response()->json([
-        'success' => true,
-        'message' => 'Bills details fetched successfully',
+        // 1. Batch details (NO bills eager loading)
+        $batch = BillUploadBatch::with('category')
+            ->withSum('bills as bills_sum_approve_amount', 'approve_amount')
+            ->find($id);
+
+        if (! $batch) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch not found',
+            ], 404);
+        }
+
+        // 2. Paginated bills
+        $bills = Bill::where('bill_upload_batch_id', $id)
+            ->with(['billUploadBatch', 'vendorContact'])
+            ->latest()
+            ->paginate($perPage);
+
+        // 3. Response
+        return response()->json([
+            'success' => true,
+            'message' => 'Bills details fetched successfully',
             'id' => $batch->id,
             'title' => $batch->title,
             'category' => $batch->category?->name,
@@ -190,48 +194,29 @@ public function getUserBillsDetails(Request $request, $id)
             ),
             'data' => BillResource::collection($bills),
             'meta' => pagination_response($bills),
-    ]);
-}
+        ]);
+    }
 
-    public function getEmployeeBills(EmployeeUserBillsRequest $request)
+    public function getEmployeeBills(EmployeeUserBillsRequest $request): JsonResponse
     {
-        $month = $request->month ?? now()->month;
+        $month = $request->integer('month', now()->month);
         $year = now()->year;
         $selectedMonth = Carbon::create($year, $month, 1);
-        $startDate = $selectedMonth->copy()
-            ->subMonth()
-            ->day(26)
-            ->startOfDay();
+        $startDate = $selectedMonth->copy()->subMonth()->day(26)->startOfDay();
+        $endDate = $selectedMonth->copy()->day(config('app.billing_cutoff', 25))->endOfDay();
 
-        $endDate = $selectedMonth->copy()
-            ->day(25)
-            ->endOfDay();
+        $status = BillStatus::tryFrom((string) $request->input('status', ''));
 
-        $users = Bill::query()
-            ->join('users', 'users.id', '=', 'bill.user_id')
-            ->leftJoin('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
-            ->where('users.role', UserRole::EMPLOYEE->value)
-            ->whereBetween('bill.created_at', [$startDate, $endDate])
-            ->when($request->filled('status'), function ($q) use ($request) {
-                $q->where('bill.status', $request->status);
-            })
-            ->groupBy('users.id', 'users.name', 'users.email')
-            ->select([
-                'users.id',
-                'users.name',
-                'users.email',
-                DB::raw('MAX(batch.currency) as currency'),
-                DB::raw('MAX(bill.status) as status'),
-                DB::raw('SUM(bill.amount) as total_amount'),
-                DB::raw('SUM(bill.approve_amount) as total_approve_amount'),
-                DB::raw('COUNT(bill.id) as bills_count'),
-            ])
-            ->latest('users.id')
-            ->paginate($request->per_page ?? 15);
+        $users = $this->adminBillService->getEmployeeBillsSummary(
+            startDate: $startDate,
+            endDate: $endDate,
+            status: $status,
+            perPage: $request->integer('per_page', 15),
+        );
 
         return response()->json([
             'success' => true,
-            'message'=>"employee bills fetched successfully",
+            'message' => 'employee bills fetched successfully',
             'month' => $month,
             'year' => $year,
             'start_date' => $startDate->toDateString(),

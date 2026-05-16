@@ -24,7 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bills/claimable-amount', [BillController::class, 'getClaimableAmount']);
     Route::apiResource('bills', BillController::class);
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
-//    Route::get('/bills/{bill}/file', [FileController::class, 'viewBillFile'])->name('bills.file');
+    //    Route::get('/bills/{bill}/file', [FileController::class, 'viewBillFile'])->name('bills.file');
     Route::get('/batches/{batch}/preview', [BillUploadBatchController::class, 'preview'])->name('batches.preview');
 
     // Admin/Emplyee details only
@@ -43,7 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin Bill Verification
     Route::prefix('admin')->middleware('admin')->group(function () {
         Route::post('/bills/{bill}/verify', [VerifyBillController::class, 'verifyBill']);
-        Route::post('/bills/{pivotId}/bulk-reimburse', [VerifyBillController::class, 'bulkReimburse']);
+        Route::post('/bills/{pivotId}/bulk-reimburse', [VerifyBillController::class, 'bulkReimburse'])->name('bills.bulk-reimburse');
         Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
         Route::get('/categoryWiseBills/{userId}/{categoryId}', [CategoryController::class, 'getUserCategoryWiseBillDetails']);
         Route::get('/categoryWiseBills/{userId}', [CategoryController::class, 'getUserCategoryWiseBills']);

@@ -9,7 +9,6 @@ use App\Models\Bill;
 use App\Models\CategoryMonthlyPivot;
 use App\Services\BillUploadBatchService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class VerifyBillController extends Controller
 {
@@ -18,14 +17,15 @@ class VerifyBillController extends Controller
      */
     public function verifyBill(VerifyBillRequest $request, Bill $bill): JsonResponse
     {
-         $bill->load('billUploadBatch', 'category');
+        $bill->load('billUploadBatch', 'category');
 
-         if(in_array($bill->status, [BillStatus::INVALID->value, BillStatus::REJECTED->value])){
+        if (in_array($bill->status, [BillStatus::INVALID->value, BillStatus::REJECTED->value])) {
             $bill->update([
                 'status' => BillStatus::REJECTED->value,
                 'approve_amount' => 0,
                 'reason_for_action' => $request->reason_for_action,
             ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Bill has already been verified or rejected.',
@@ -45,7 +45,6 @@ class VerifyBillController extends Controller
         $alreadyApproved = $query->sum('approve_amount');
         $totalAmount = $query->sum('amount');
 
-
         $remainingLimit = max($categoryLimit - $alreadyApproved, 0);
         if ($remainingLimit <= 0) {
             $bill->update([
@@ -61,7 +60,7 @@ class VerifyBillController extends Controller
                 'already_approved' => format_currency($alreadyApproved, $currency),
                 'total_amount' => format_currency($totalAmount, $currency),
             ], 422);
-        
+
         }
         $requestedAmount = $request->approve_amount ?? 0;
         $finalApprovedAmount = min($requestedAmount, $remainingLimit);
@@ -77,8 +76,8 @@ class VerifyBillController extends Controller
         return response()->json([
             'message' => "Bill has been {$request->status}.",
             'currency' => $currency,
-            'final_approve_amount' => format_currency($finalApprovedAmount,$currency),
-            'remaining_category_amount' => format_currency(max($remainingLimit - $finalApprovedAmount, 0),$currency),
+            'final_approve_amount' => format_currency($finalApprovedAmount, $currency),
+            'remaining_category_amount' => format_currency(max($remainingLimit - $finalApprovedAmount, 0), $currency),
             'approve_amount' => format_currency($approve_amount, $currency),
             'total_amount' => format_currency($totalAmount, $currency),
         ]);
@@ -92,9 +91,9 @@ class VerifyBillController extends Controller
     {
         $pivot = CategoryMonthlyPivot::findOrFail($pivotId);
         $currentMonthYear = $service->getMonthYear();
-
-        if ($pivot->month_year !== $currentMonthYear) {
+        if ($pivot->month_year != $currentMonthYear) {
             return response()->json([
+                'success' => false,
                 'message' => 'Action only allowed for the current billing month.',
             ], 403);
         }
@@ -102,6 +101,7 @@ class VerifyBillController extends Controller
         BulkReimburseBillsJob::dispatch($pivotId);
 
         return response()->json([
+            'success' => true,
             'message' => 'Bulk reimbursement process has been queued.',
         ]);
     }

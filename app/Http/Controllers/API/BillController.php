@@ -19,7 +19,6 @@ use App\Services\BillUploadBatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Log;
 
 class BillController extends Controller
 {
@@ -33,6 +32,7 @@ class BillController extends Controller
         $bills = $this->billService->getFilteredBills($request->all());
 
         return response()->json([
+            'success' => true,
             'data' => $bills,
         ]);
     }
@@ -115,6 +115,7 @@ class BillController extends Controller
         $bill = $this->billService->changeBillStatus($bill, BillStatus::from($request->status));
 
         return response()->json([
+            'success' => true,
             'message' => 'Bill status updated successfully',
             'data' => $bill,
         ]);

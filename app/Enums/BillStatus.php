@@ -22,4 +22,9 @@ enum BillStatus: string
             self::REIMBURSED => 'Paid',
         };
     }
+
+    public static function adminBillStatuses(): array
+    {
+        return [self::UNDER_REVIEW->value, self::REJECTED->value, self::VERIFIED->value, self::REIMBURSED->value];
+    }
 }
