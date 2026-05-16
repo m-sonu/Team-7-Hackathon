@@ -57,9 +57,10 @@
             @foreach($validBills as $bill)
             <tr>
                 <td style="padding: 12px 15px; background-color: #ffffff; border-bottom: 1px solid #d1fae5; font-size: 13px;">
-                    <div style="float: right;">
-                        <a href="{{ $bill->file_preview_url }}" style="color: #4f46e5; text-decoration: none; font-weight: bold;">View File</a>
-                    </div>
+{{--                    <div style="float: right;">--}}
+{{--                        <a href="{{ $bill->file_preview_url }}" style="color: #4f46e5; text-decoration: none; font-weight: bold;">View File</a>--}}
+{{--                    </div>--}}
+                    <div style="font-size: 13px; font-weight: bold; color: #374151;">{{ $bill->getFirstMedia('bills')?->name ?? 'Unknown' }}</div>
                     <strong>Bill #{{ $bill->bill_no }}</strong> &bull; {{ $batch->currency }} {{ number_format($bill->amount, 2) }}
                 </td>
             </tr>
@@ -73,10 +74,11 @@
             @foreach($invalidBills as $item)
             <tr>
                 <td style="padding: 12px 15px; background-color: #ffffff; border-bottom: 1px solid #fee2e2;">
-                    <div style="float: right;">
-                        <a href="{{ $item->file_preview_url }}" style="color: #dc2626; text-decoration: none; font-weight: bold; font-size: 12px;">View File</a>
-                    </div>
+{{--                    <div style="float: right;">--}}
+{{--                        <a href="{{ $item->file_preview_url }}" style="color: #dc2626; text-decoration: none; font-weight: bold; font-size: 12px;">View File</a>--}}
+{{--                    </div>--}}
                     <div style="font-size: 13px; font-weight: bold; color: #374151;">{{ $item->getFirstMedia('bills')?->name ?? 'Unknown' }}</div>
+                    <strong> {{ $batch->currency }} {{ number_format($item->amount, 2) }}</strong>
                     <div style="font-size: 12px; color: #dc2626; margin-top: 2px;">Reason: {{ $item->validation_error }}</div>
                 </td>
             </tr>

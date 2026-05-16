@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Actions\SendReimbursementNotificationToAdmin;
 use App\Actions\SubmitBillForReimburseAction;
 use App\DTOs\StoreBillDTO;
 use App\Enums\BillStatus;
@@ -17,6 +18,8 @@ use App\Services\BillService;
 use App\Services\BillUploadBatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 
 class BillController extends Controller
 {
@@ -52,14 +55,31 @@ class BillController extends Controller
     /**
      * Submit all pending bills in a batch for reimbursement.
      */
-    public function submitBatch(BillUploadBatch $batch, SubmitBillForReimburseAction $action): JsonResponse
-    {
+    public function submitBatch(
+        BillUploadBatch $batch,
+        SubmitBillForReimburseAction $submitAction,
+        SendReimbursementNotificationToAdmin $notifyAction,
+    ): JsonResponse {
         $this->authorize('view', $batch);
 
-        $count = $action->execute($batch);
+        $bills = $submitAction->execute($batch);
+
+        if ($bills->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => "There are no bills to send reimbursement notification for {$batch->id}",
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $notifyAction->execute(
+            requester: $batch->user,
+            bills: $bills,
+            batchId: $batch->id
+        );
 
         return response()->json([
-            'message' => "Successfully submitted {$count} bills for reimbursement.",
+            'success' => true,
+            'message' => "Successfully submitted {$bills->count()} bills for reimbursement.",
         ]);
     }
 
@@ -114,26 +134,5 @@ class BillController extends Controller
         $data = $this->billService->calculateAndEmailClaimableAmount($user);
 
         return response()->json($data);
-    }
-
-    /**
-     * View the file associated with the bill.
-     */
-    public function viewFile(Request $request, Bill $bill): mixed
-    {
-        $user = $request->user();
-
-        // Check if user is owner or admin
-        if ($user->id !== $bill->user_id && $user->role !== UserRole::ADMIN) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $media = $bill->getFirstMedia('bills');
-
-        if (! $media) {
-            return response()->json(['message' => 'File not found'], 404);
-        }
-
-        return response()->file($media->getPath());
     }
 }

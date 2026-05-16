@@ -23,7 +23,7 @@ class NotifyUserOfBatchStatusAction
                 $previewData['batch'],
                 $previewData['valid_bills'],
                 $previewData['invalid_bills'],
-                config('app.frontend_url') . "/batches/{$batch->id}/preview" // @todo: need to update with correct route
+                config('app.frontend_url')."/review-batch/{$batch->id}"
             )
         );
     }

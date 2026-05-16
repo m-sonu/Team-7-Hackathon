@@ -8,6 +8,7 @@ use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use App\Models\CategoryMonthlyPivot;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\URL;
 
 class BillUploadBatchService
 {
@@ -159,7 +160,10 @@ class BillUploadBatchService
 
             $bill->is_valid = $isValid;
             $bill->validation_error = $reason ?? $bill->reason_for_action;
-            $bill->file_preview_url = url("/api/bills/{$bill->id}/file");
+            $bill->file_preview_url = URL::signedRoute('bills.file', [
+                'bill' => $bill->id,
+                'user' => auth('sanctum')->id(),
+            ]);
 
             if ($isValid) {
                 $validBills->push($bill);

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\URL;
 
 class BillResource extends JsonResource
 {
@@ -14,7 +15,7 @@ class BillResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-  
+
         return [
             'id' => $this->id,
             'bill_no' => $this->bill_no,
@@ -23,8 +24,11 @@ class BillResource extends JsonResource
             'approved_amount' => format_currency($this->approve_amount ?? 0, $this->billUploadBatch->currency),
             'status' => $this->status,
             'is_valid' => $this->is_valid ?? true,
-            'validation_error' => $this->validation_error,
-            'file_preview_url' => $this->file_preview_url,
+            'validation_error' => $this->reason_for_action,
+            'file_preview_url' => URL::signedRoute('bills.file', [
+                'bill' => $this->id,
+                'user' => auth('sanctum')->id(),
+            ]),
             'category' => new CategoryResource($this->whenLoaded('category')),
             'billUploadBatch' => $this->whenLoaded('billUploadBatch', function () {
                 return [

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property CategoryMonthlyPivot $categoryMonthlyPivot
+ * @property Category $category
  */
 class BillUploadBatch extends Model
 {

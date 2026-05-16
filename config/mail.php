@@ -116,5 +116,4 @@ return [
     ],
 
     'footer' => env('APP_NAME', 'JoBins HR'),
-
 ];
