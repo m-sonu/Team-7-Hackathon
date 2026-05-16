@@ -124,16 +124,24 @@ class BillController extends Controller
     /**
      * Calculate the total claimable amount for a user.
      */
-    public function getClaimableAmount(Request $request): JsonResponse
+    public function getClaimableAmount($userId): JsonResponse
     {
-        $user = $request->user();
-
-        if ($request->has('user_id') && $user->role === UserRole::ADMIN) {
-            $user = User::findOrFail($request->user_id);
-        }
-
+        $user = User::findOrFail($userId);
         $data = $this->billService->calculateAndEmailClaimableAmount($user);
-
         return response()->json($data);
     }
+
+   public function getClaimableAmountForEmployees(): JsonResponse
+{
+    User::where('role', UserRole::EMPLOYEE->value)
+        ->chunk(20, function ($users) {
+            foreach ($users as $user) {
+                $this->billService->calculateAndEmailClaimableAmount($user);
+            }
+        });
+
+    return response()->json([
+        'message' => 'Claimable amount processed for all employees.'
+    ]);
+}
 }

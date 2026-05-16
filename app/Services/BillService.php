@@ -6,8 +6,10 @@ use App\Enums\BillStatus;
 use App\Mail\ClaimableAmountReportMail;
 use App\Models\Bill;
 use App\Models\User;
+use App\Enums\UserRole;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
 
 class BillService
 {
@@ -51,41 +53,47 @@ class BillService
      */
     public function calculateAndEmailClaimableAmount(User $user): array
     {
-        $month = now()->month;
-        $year = now()->year;
+        $date = Carbon::now();
+        $month = $date->month;
+        $year = $date->year;
+        $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
+        $endDate = $date->copy()->day(25)->endOfDay();
 
         // For now, we consider all verified bills as claimable
-        $bills = Bill::where('user_id', $user->id)
-            ->whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
+        $bills = Bill::with(['category','billUploadBatch'])->where('user_id', $user->id)
+            ->where('created_at', '>=', $startDate)
+            ->where('created_at', '<=', $endDate)
             ->where('status', BillStatus::VERIFIED)
             ->get();
-
-        $totalClaimableAmount = $bills->sum('amount');
+        $totalClaimableAmount = format_currency($bills->sum('amount'), $bills->first()->billUploadBatch->currency ?? '');
+        $totalApproveAmount = format_currency($bills->sum('approve_amount'), $bills->first()->billUploadBatch->currency ?? '');
         $billsResponse = [];
-
         foreach ($bills as $bill) {
             $billsResponse[] = [
                 'bill_id' => $bill->id,
                 'bill_number' => $bill->bill_no,
-                'date' => $bill->created_at->toDateTimeString(),
-                'bill_total' => (float) $bill->amount,
+                'date' => $bill->created_at->format('M d Y'),
+                'bill_total' => format_currency($bill->amount, $bill->billUploadBatch->currency ?? ''),
+                'bill_approved' => format_currency($bill->approve_amount, $bill->billUploadBatch->currency ?? ''),
             ];
         }
 
-        Mail::to($user->email)->send(new ClaimableAmountReportMail($user, $bills, (float) $totalClaimableAmount, $month, $year));
+        Mail::to($user->email)->send(new ClaimableAmountReportMail($user, $bills, $totalClaimableAmount, $totalApproveAmount, $month, $year));
 
-        $admins = User::where('role', 'admin')->get();
+        $admins = User::where('role', UserRole::ADMIN->value)->get();
         foreach ($admins as $admin) {
-            Mail::to($admin->email)->send(new ClaimableAmountReportMail($user, $bills, (float) $totalClaimableAmount, $month, $year));
+            Mail::to($admin->email)->send(new ClaimableAmountReportMail($user, $bills, $totalClaimableAmount, $totalApproveAmount, $month, $year));
         }
 
         return [
+            'success' => true,
+            'message' => 'Claimable amount calculated successfully',
             'user_id' => $user->id,
             'month' => $month,
             'year' => $year,
-            'total_claimable_amount' => (float) $totalClaimableAmount,
-            'bills' => $billsResponse,
+            'total_claimable_amount' => $totalClaimableAmount,
+            'total_approved_amount' => $totalApproveAmount,
+            'data' => $billsResponse,
         ];
     }
 }

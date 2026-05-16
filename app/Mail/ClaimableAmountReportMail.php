@@ -20,6 +20,8 @@ class ClaimableAmountReportMail extends Mailable
     public $bills;
 
     public $totalAmount;
+    
+    public $totalApproveAmount;
 
     public $month;
 
@@ -28,11 +30,12 @@ class ClaimableAmountReportMail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(User $user, Collection $bills, float $totalAmount, int $month, int $year)
+    public function __construct(User $user, Collection $bills, string $totalAmount, string $totalApproveAmount, int $month, int $year)
     {
         $this->user = $user;
         $this->bills = $bills;
         $this->totalAmount = $totalAmount;
+        $this->totalApproveAmount = $totalApproveAmount;
         $this->month = $month;
         $this->year = $year;
     }

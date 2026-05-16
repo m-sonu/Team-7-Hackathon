@@ -21,7 +21,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user/show/{id}', [UserController::class, 'show']);
 
-    Route::get('/bills/claimable-amount', [BillController::class, 'getClaimableAmount']);
+    Route::get('/bills/claimable-amount/{userId}', [BillController::class, 'getClaimableAmount']);
+     Route::get('/bills/claimable-amount/employees', [BillController::class, 'getClaimableAmountForEmployees']);
     Route::apiResource('bills', BillController::class);
     Route::patch('/bills/{bill}/status', [BillController::class, 'changeStatus']);
     //    Route::get('/bills/{bill}/file', [FileController::class, 'viewBillFile'])->name('bills.file');

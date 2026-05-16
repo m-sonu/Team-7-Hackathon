@@ -15,7 +15,9 @@ Here is your claimable amount report for **{{ date("F", mktime(0, 0, 0, $month, 
 
 ---
 
-### **Total Claimable Amount: Rs {{ number_format($totalAmount, 2) }}**
+### **Total Claimable Amount: {{ $totalAmount }}**
+
+### **Total Approved Amount: {{ $totalApproveAmount }}**
 
 Thanks,<br>
 {{ config('app.name') }}
