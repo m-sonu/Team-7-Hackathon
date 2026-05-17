@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserCategoryBillsRequest;
+use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Resources\BillResource;
 use App\Http\Resources\CategoryBillResource;
 use App\Http\Resources\CategoryResource;
@@ -30,6 +31,38 @@ class CategoryController extends Controller
             'message' => 'Category fetched successfully',
             'data' => CategoryResource::collection($category),
             'meta' => pagination_response($category),
+        ]);
+    }
+
+    public function store(StoreCategoryRequest $request): JsonResponse
+    {
+        $category = Category::create($request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category created successfully',
+            'data' => new CategoryResource($category),
+        ], 201);
+    }
+
+    public function update(StoreCategoryRequest $request, Category $category): JsonResponse
+    {
+        $category->update($request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category updated successfully',
+            'data' => new CategoryResource($category),
+        ]);
+    }
+
+    public function destroy(Category $category): JsonResponse
+    {
+        $category->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category deleted successfully',
         ]);
     }
 
