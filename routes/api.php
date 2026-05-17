@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('admin')->middleware('admin')->group(function () {
         Route::post('/bills/{bill}/verify', [VerifyBillController::class, 'verifyBill']);
         Route::post('/bills/bulk-reimburse', [VerifyBillController::class, 'bulkReimburse'])->name('bills.bulk-reimburse');
+        Route::post('/bills/reimburse-by-pivot', [VerifyBillController::class, 'reimburseByPivot'])->name('bills.reimburse-by-pivot');
         Route::get('/employee/bills', [UserController::class, 'getEmployeeBills']);
         Route::get('/categoryWiseBills/{userId}/{categoryId}', [CategoryController::class, 'getUserCategoryWiseBillDetails']);
         Route::get('/categoryWiseBills/{userId}', [CategoryController::class, 'getUserCategoryWiseBills']);

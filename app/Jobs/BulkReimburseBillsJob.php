@@ -21,24 +21,25 @@ class BulkReimburseBillsJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public int $pivotId) {}
+    public function __construct(public array $categoryMonthlyIds) {}
 
     /**
      * Execute the job.
+     * @throws Throwable
      */
     public function handle(): void
     {
         DB::transaction(function () {
             Bill::query()
                 ->where('status', BillStatus::VERIFIED)
-                ->where('category_monthly_pivot_id', $this->pivotId)
+                ->whereIn('category_monthly_pivot_id', $this->categoryMonthlyIds)
                 ->update(['status' => BillStatus::REIMBURSED]);
         });
 
         try {
             $reimbursedBills = Bill::query()
                 ->where('status', BillStatus::REIMBURSED)
-                ->where('category_monthly_pivot_id', $this->pivotId)
+                ->whereIn('category_monthly_pivot_id', $this->categoryMonthlyIds)
                 ->with(['category', 'vendorContact', 'billUploadBatch.categoryMonthlyPivot'])
                 ->get();
 
@@ -50,7 +51,7 @@ class BulkReimburseBillsJob implements ShouldQueue
                     if (! $employee) {
                         Log::warning('Skipping reimbursement report: employee not found.', [
                             'user_id' => $userId,
-                            'pivot_id' => $this->pivotId,
+                            'pivot_ids' => $this->categoryMonthlyIds,
                         ]);
 
                         return;
@@ -69,7 +70,7 @@ class BulkReimburseBillsJob implements ShouldQueue
                 });
         } catch (Throwable $e) {
             Log::error('Failed to dispatch reimbursement report emails after bulk reimburse.', [
-                'pivot_id' => $this->pivotId,
+                'pivot_ids' => $this->categoryMonthlyIds,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

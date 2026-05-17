@@ -18,6 +18,7 @@ class BillResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'category_monthly_pivot_id' => $this->category_monthly_pivot_id,
             'bill_no' => $this->bill_no,
             'vat_no' => $this->vat_no,
             'amount' => format_currency($this->amount ?? 0, $this->billUploadBatch->currency),
