@@ -19,78 +19,56 @@ class VerifyBillController extends Controller
      */
     public function verifyBill(VerifyBillRequest $request, Bill $bill): JsonResponse
     {
-        $currency="NPR";
-        $bill->load('billUploadBatch', 'category');
-        $date = Carbon::now();
-        $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
-        $endDate = $date->copy()->day(25)->endOfDay();
+          $bill->load('billUploadBatch', 'category');
 
-        $categoryLimit = $bill->category->limit;
-        $query = Bill::where('user_id', $bill->user_id)
-            ->where('category_id', $bill->category_id)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->where('id', '!=', $bill->id);
+    $currency = $bill->billUploadBatch?->currency ?? 'YEN';
 
-        $alreadyApproved = $query->sum('approve_amount');
-        $totalAmount = $query->sum('amount');
+    $baseResponse = [
+        'success' => true,
+        'remaining_category_amount' => format_currency(0, $currency),
+        'already_approved' => format_currency(0, $currency),
+        'total_amount' => format_currency($bill->amount, $currency),
+        'currency' => $currency,
+        'final_approve_amount' => format_currency(0, $currency),
+    ];
 
-        $remainingLimit = max($categoryLimit - $alreadyApproved, 0);
-         if (in_array($bill->status, [BillStatus::INVALID->value, BillStatus::REJECTED->value])) {
-            $bill->update([
-                'status' => BillStatus::REJECTED->value,
-                'approve_amount' => 0,
-                'reason_for_action' => $request->reason_for_action,
-            ]);
+    if ($bill->status) {
+        return response()->json([
+            ...$baseResponse,
+            'message' => 'Bill has already been verified',
+            'approve_amount' => format_currency($bill->approve_amount, $currency),
+        ], 200);
+    }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Bill has already been verified or rejected.',
-                'remaining_category_amount' => format_currency($remainingLimit, $currency),
-                'already_approved' => format_currency($alreadyApproved, $currency),
-                'total_amount' => format_currency($totalAmount, $currency),
-                'currency' => $currency,
-                'final_approve_amount' => format_currency(0, $currency),
-                 'approve_amount' => format_currency(0, $currency),
-            ], 200);
-        }
-        if ($remainingLimit <= 0) {
-            $bill->update([
-                'status' => BillStatus::REJECTED->value,
-                'approve_amount' => 0,
-                'reason_for_action' => 'Category limit reached',
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Bill limit is reached.',
-                'remaining_category_amount' => format_currency(0, $currency),
-                'already_approved' => format_currency($alreadyApproved, $currency),
-                'total_amount' => format_currency($totalAmount, $currency),
-                'currency' => $currency,
-                'final_approve_amount' => format_currency(0, $currency),
-                 'approve_amount' => format_currency(0, $currency),
-            ], 200);
-
-        }
-        $requestedAmount = $request->approve_amount ?? 0;
-        $finalApprovedAmount = min($requestedAmount, $remainingLimit);
+    if (in_array($request->status, [
+        BillStatus::INVALID->value,
+        BillStatus::REJECTED->value,
+    ])) {
 
         $bill->update([
-            'status' => $request->status,
-            'approve_amount' => $finalApprovedAmount,
+            'status' => BillStatus::REJECTED->value,
+            'approve_amount' => 0,
             'reason_for_action' => $request->reason_for_action,
         ]);
-        $currency = $bill->billUploadBatch?->currency ?? '';
-        $approve_amount = $alreadyApproved + $finalApprovedAmount;
 
         return response()->json([
-            'message' => "Bill has been {$request->status}.",
-            'currency' => $currency,
-            'final_approve_amount' => format_currency($finalApprovedAmount, $currency),
-            'remaining_category_amount' => format_currency(max($remainingLimit - $finalApprovedAmount, 0), $currency),
-            'approve_amount' => format_currency($approve_amount, $currency),
-            'total_amount' => format_currency($totalAmount, $currency),
-        ],200);
+            ...$baseResponse,
+            'message' => 'Bill has already been verified or rejected.',
+            'approve_amount' => format_currency(0, $currency),
+        ], 200);
+    }
+
+    $bill->update([
+        'status' => $request->status,
+        'approve_amount' => $bill->amount,
+        'reason_for_action' => $request->reason_for_action ?? '',
+    ]);
+
+    return response()->json([
+        ...$baseResponse,
+        'message' => "Bill has been {$request->status}.",
+        'approve_amount' => format_currency($bill->amount, $currency),
+    ], 200);
     }
 
     /**

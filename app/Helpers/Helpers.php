@@ -3,7 +3,7 @@ use App\Enums\Currency;
 
 
 if (! function_exists('format_currency')) {
-    function format_currency($amount, $currency = 'NRP'): string
+    function format_currency($amount, $currency = 'YEN'): string
     {
         return match (strtoupper($currency)) {
             Currency::YEN->value => '¥ '.number_format($amount),

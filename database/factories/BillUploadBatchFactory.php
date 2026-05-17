@@ -22,7 +22,7 @@ class BillUploadBatchFactory extends Factory
     {
         return [
             'title' => $this->faker->sentence(3),
-            'currency' => 'NRP',
+            'currency' => 'YEN',
             'user_id' => User::factory(),
             'category_id' => Category::factory(),
             'category_monthly_pivot_id' => null,

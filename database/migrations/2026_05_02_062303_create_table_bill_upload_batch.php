@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create(BillUploadBatch::TABLE_NAME, function (Blueprint $table) {
             $table->id();
             $table->string('title');
-            $table->string('currency', 10)->default('NRP');
+            $table->string('currency', 10)->default('YEN');
             $table->enum('ai_processing', AiProcessStatus::all())
                 ->default(AiProcessStatus::PROCESSING->value);
             // Link to the user
