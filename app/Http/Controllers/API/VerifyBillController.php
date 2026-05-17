@@ -76,9 +76,9 @@ class VerifyBillController extends Controller
      * Bulk reimburse all verified bills for a specific category monthly pivot.
      * Admin is only allowed to perform this action for the current billing month.
      */
-    public function bulkReimburse(int $pivotId, BillUploadBatchService $service): JsonResponse
+    public function bulkReimburse(BillUploadBatchService $service): JsonResponse
     {
-        $pivot = CategoryMonthlyPivot::findOrFail($pivotId);
+        $pivot = CategoryMonthlyPivot::where('month_year', Carbon::now()->format('Y-m'))->first();
         $currentMonthYear = $service->getMonthYear();
         if ($pivot->month_year != $currentMonthYear) {
             return response()->json([
@@ -87,7 +87,7 @@ class VerifyBillController extends Controller
             ], 403);
         }
 
-        BulkReimburseBillsJob::dispatch($pivotId);
+        BulkReimburseBillsJob::dispatch($pivot->id);
 
         return response()->json([
             'success' => true,
