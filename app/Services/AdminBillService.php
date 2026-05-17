@@ -52,10 +52,12 @@ class AdminBillService
         $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
         $endDate = $date->copy()->day(25)->endOfDay();
 
-        $statusList = implode("','", BillStatus::adminBillStatuses());
+        $validStatuses = BillStatus::adminBillStatuses();
+        $statusList = implode("','", $validStatuses);
 
         return DB::table('bill')
             ->where('bill.user_id', $userId)
+            ->whereIn('bill.status', $validStatuses)
             ->whereBetween('bill.created_at', [$startDate, $endDate])
             ->join('category', 'category.id', '=', 'bill.category_id')
             ->leftJoin('bill_upload_batch as batch', function ($join) use ($userId, $startDate, $endDate) {
