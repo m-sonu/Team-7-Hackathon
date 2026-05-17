@@ -104,10 +104,15 @@ class BillUploadBatchService
                 }
             }
 
-            $bill->update([
-                'status' => $isValid ? BillStatus::PENDING : BillStatus::INVALID,
-                'reason_for_action' => $reason,
-            ]);
+            // Only update bills that haven't been submitted yet
+            if (in_array($bill->status, [BillStatus::PENDING, BillStatus::INVALID])) {
+                $bill->update([
+                    'status' => $isValid ? BillStatus::PENDING : BillStatus::INVALID,
+                    'reason_for_action' => $reason,
+                ]);
+            } elseif ($isValid) {
+                $seenInBatch["{$bill->vat_no}_{$bill->bill_no}"] = true;
+            }
         }
     }
 

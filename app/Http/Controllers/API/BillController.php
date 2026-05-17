@@ -92,19 +92,44 @@ class BillController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update bill fields (bill_no, vat_no, amount) and re-validate the batch.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Bill $bill, BillUploadBatchService $batchService): JsonResponse
     {
-        //
+        if ($bill->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'bill_no' => 'nullable|string|max:255',
+            'vat_no'  => 'nullable|string|max:255',
+            'amount'  => 'nullable|numeric|min:0',
+        ]);
+
+        $bill->update($validated);
+        $batchService->validateAndSetBillStatuses($bill->billUploadBatch);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bill updated successfully.',
+        ]);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Delete a bill (owner only).
      */
-    public function destroy(string $id)
+    public function destroy(Bill $bill): JsonResponse
     {
-        //
+        if ($bill->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $bill->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bill removed successfully.',
+        ]);
     }
 
     /**
