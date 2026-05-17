@@ -32,10 +32,11 @@ class VerifyBillController extends Controller
         'final_approve_amount' => format_currency(0, $currency),
     ];
 
-    if ($bill->status) {
+    $settledStatuses = [BillStatus::VERIFIED->value, BillStatus::REJECTED->value, BillStatus::REIMBURSED->value];
+    if (in_array($bill->status, $settledStatuses)) {
         return response()->json([
             ...$baseResponse,
-            'message' => 'Bill has already been verified',
+            'message' => 'Bill has already been verified or rejected.',
             'approve_amount' => format_currency($bill->approve_amount, $currency),
         ], 200);
     }
