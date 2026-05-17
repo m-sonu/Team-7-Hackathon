@@ -70,7 +70,7 @@ class AdminBillService
                 ));
             })
             ->selectRaw("
-            bill.updated_at,
+            MAX(bill.updated_at)         AS updated_at,
             bill.category_id,
             category.name                AS category_name,
             COUNT(bill.id)               AS bill_count,
