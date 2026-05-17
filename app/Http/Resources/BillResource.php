@@ -21,6 +21,7 @@ class BillResource extends JsonResource
             'bill_no' => $this->bill_no,
             'vat_no' => $this->vat_no,
             'amount' => format_currency($this->amount ?? 0, $this->billUploadBatch->currency),
+            'amount_raw' => (float) ($this->amount ?? 0),
             'approved_amount' => format_currency($this->approve_amount ?? 0, $this->billUploadBatch->currency),
             'status' => $this->status,
             'is_valid' => $this->is_valid ?? true,
