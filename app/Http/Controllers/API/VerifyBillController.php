@@ -19,7 +19,7 @@ class VerifyBillController extends Controller
      */
     public function verifyBill(VerifyBillRequest $request, Bill $bill): JsonResponse
     {
-        $currency="NPR";
+        $currency = 'NPR';
         $bill->load('billUploadBatch', 'category');
         $date = Carbon::now();
         $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
@@ -35,7 +35,7 @@ class VerifyBillController extends Controller
         $totalAmount = $query->sum('amount');
 
         $remainingLimit = max($categoryLimit - $alreadyApproved, 0);
-         if (in_array($bill->status, [BillStatus::INVALID->value, BillStatus::REJECTED->value])) {
+        if (in_array($bill->status, [BillStatus::INVALID->value, BillStatus::REJECTED->value])) {
             $bill->update([
                 'status' => BillStatus::REJECTED->value,
                 'approve_amount' => 0,
@@ -50,7 +50,7 @@ class VerifyBillController extends Controller
                 'total_amount' => format_currency($totalAmount, $currency),
                 'currency' => $currency,
                 'final_approve_amount' => format_currency(0, $currency),
-                 'approve_amount' => format_currency(0, $currency),
+                'approve_amount' => format_currency(0, $currency),
             ], 200);
         }
         if ($remainingLimit <= 0) {
@@ -68,15 +68,16 @@ class VerifyBillController extends Controller
                 'total_amount' => format_currency($totalAmount, $currency),
                 'currency' => $currency,
                 'final_approve_amount' => format_currency(0, $currency),
-                 'approve_amount' => format_currency(0, $currency),
+                'approve_amount' => format_currency(0, $currency),
             ], 200);
 
         }
         $requestedAmount = $request->approve_amount ?? 0;
         $finalApprovedAmount = min($requestedAmount, $remainingLimit);
 
+        $status = BillStatus::VERIFIED->value;
         $bill->update([
-            'status' => $request->status,
+            'status' => $status,
             'approve_amount' => $finalApprovedAmount,
             'reason_for_action' => $request->reason_for_action,
         ]);
@@ -84,13 +85,13 @@ class VerifyBillController extends Controller
         $approve_amount = $alreadyApproved + $finalApprovedAmount;
 
         return response()->json([
-            'message' => "Bill has been {$request->status}.",
+            'message' => "Bill has been {$status}.",
             'currency' => $currency,
             'final_approve_amount' => format_currency($finalApprovedAmount, $currency),
             'remaining_category_amount' => format_currency(max($remainingLimit - $finalApprovedAmount, 0), $currency),
             'approve_amount' => format_currency($approve_amount, $currency),
             'total_amount' => format_currency($totalAmount, $currency),
-        ],200);
+        ], 200);
     }
 
     /**
