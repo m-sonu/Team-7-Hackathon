@@ -32,11 +32,16 @@ class BillUploadBatchResource extends JsonResource
 
     /**
      * Determine a representative status for the batch.
+     * Active statuses (pending, under_review, verified) take priority over settled ones.
      */
     protected function determineBatchStatus(): string
     {
         if ($this->bills_count_pending > 0) {
             return BillStatus::PENDING->value;
+        }
+
+        if ($this->bills_count_under_review > 0) {
+            return BillStatus::UNDER_REVIEW->value;
         }
 
         if ($this->bills_count_verified > 0) {
@@ -51,6 +56,6 @@ class BillUploadBatchResource extends JsonResource
             return BillStatus::REJECTED->value;
         }
 
-        return BillStatus::PENDING->value; // Default
+        return BillStatus::PENDING->value;
     }
 }

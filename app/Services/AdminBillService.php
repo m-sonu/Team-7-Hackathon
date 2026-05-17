@@ -88,10 +88,10 @@ class AdminBillService
                   AND b2.created_at BETWEEN ? AND ?
                 ORDER BY
                     CASE b2.status
-                        WHEN 'under review' THEN 1
-                        WHEN 'verified'     THEN 2
-                        WHEN 'rejected'     THEN 3
-                        WHEN 'reimbursed'   THEN 4
+                        WHEN 'reimbursed'   THEN 1
+                        WHEN 'rejected'     THEN 2
+                        WHEN 'verified'     THEN 3
+                        WHEN 'under review' THEN 4
                         ELSE 0
                     END DESC
                 LIMIT 1

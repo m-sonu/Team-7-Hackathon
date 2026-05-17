@@ -129,6 +129,7 @@ class UserController extends Controller
             ->withSum('bills as bills_sum_amount', 'amount')
             ->withCount('bills')
             ->withCount(['bills as bills_count_pending' => fn ($q) => $q->where('status', BillStatus::PENDING->value)])
+            ->withCount(['bills as bills_count_under_review' => fn ($q) => $q->where('status', BillStatus::UNDER_REVIEW->value)])
             ->withCount(['bills as bills_count_verified' => fn ($q) => $q->where('status', BillStatus::VERIFIED->value)])
             ->withCount(['bills as bills_count_paid' => fn ($q) => $q->where('status', BillStatus::REIMBURSED->value)])
             ->withCount(['bills as bills_count_rejected' => fn ($q) => $q->where('status', BillStatus::REJECTED->value)])
