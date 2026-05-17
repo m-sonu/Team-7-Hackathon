@@ -25,7 +25,9 @@ class VerifyBillRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'status' => ['required', new Enum(BillStatus::class)],
             'approve_amount' => [
+                'required_if:status,'.BillStatus::VERIFIED->value,
                 'numeric',
                 'min:0',
             ],
