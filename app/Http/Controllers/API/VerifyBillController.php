@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Enums\BillStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\API\VerifyBillRequest;
 use App\Jobs\BulkReimburseBillsJob;
 use App\Models\Bill;
 use App\Models\CategoryMonthlyPivot;
 use App\Services\BillUploadBatchService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 
 class VerifyBillController extends Controller
@@ -17,6 +19,7 @@ class VerifyBillController extends Controller
      */
     public function verifyBill(VerifyBillRequest $request, Bill $bill): JsonResponse
     {
+        $currency="NPR";
         $bill->load('billUploadBatch', 'category');
         $date = Carbon::now();
         $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
