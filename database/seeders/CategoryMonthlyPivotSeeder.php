@@ -56,7 +56,7 @@ class CategoryMonthlyPivotSeeder extends Seeder
                     // Create a bill upload batch
                     $batch = BillUploadBatch::create([
                         'title' => "Bills for {$category->name} - {$monthYear}",
-                        'currency' => 'NRP',
+                        'currency' => 'YEN',
                         'user_id' => $user->id,
                         'category_id' => $category->id,
                         'category_monthly_pivot_id' => $pivot->id,
