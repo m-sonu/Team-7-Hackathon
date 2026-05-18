@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Enums\BillStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserCategoryBillsRequest;
 use App\Http\Requests\StoreCategoryRequest;
@@ -11,7 +12,6 @@ use App\Http\Resources\CategoryResource;
 use App\Models\Bill;
 use App\Models\Category;
 use App\Services\AdminBillService;
-use DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -76,10 +76,22 @@ class CategoryController extends Controller
         $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
         $endDate = $date->copy()->day(25)->endOfDay();
 
+        $statusOrder = [
+            BillStatus::UNDER_REVIEW->value,
+            BillStatus::VERIFIED->value,
+            BillStatus::REJECTED->value,
+            BillStatus::REIMBURSED->value,
+        ];
+
         $bills = Bill::with(['category', 'billUploadBatch'])
             ->where('user_id', $userId)
             ->where('category_id', $categoryId)
             ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereIn('status', BillStatus::adminBillStatuses())
+            ->orderByRaw(
+                'CASE status WHEN ? THEN 1 WHEN ? THEN 2 WHEN ? THEN 3 WHEN ? THEN 4 ELSE 5 END',
+                $statusOrder
+            )
             ->paginate(10);
         $currency = $bills->first()?->billUploadBatch?->currency;
 

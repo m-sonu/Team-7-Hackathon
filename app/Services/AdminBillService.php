@@ -37,6 +37,7 @@ class AdminBillService
         };
 
         return User::query()
+            ->with('bills.billUploadBatch:id,currency')
             ->where('role', UserRole::EMPLOYEE->value)
             ->whereHas('bills', $billFilter)
             ->withCount(['bills as bills_count' => $billFilter])
