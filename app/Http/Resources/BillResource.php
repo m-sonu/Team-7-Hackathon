@@ -2,12 +2,18 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\BillStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\URL;
 
 class BillResource extends JsonResource
 {
+    public function __construct($resource)
+    {
+        parent::__construct($resource);
+    }
+
     /**
      * Transform the resource into an array.
      *
@@ -15,15 +21,23 @@ class BillResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $updatedCategoryLimit = $request->attributes->get('updated_category_limit');
+        $billAmount = (float) ($this->amount ?? 0);
+
+        $claimableAmount = $this->getClaimableAmount($updatedCategoryLimit, $billAmount);
+
+        $billUploadBatch = $this->billUploadBatch;
+        $batchCurrency = $billUploadBatch->currency;
 
         return [
             'id' => $this->id,
             'category_monthly_pivot_id' => $this->category_monthly_pivot_id,
             'bill_no' => $this->bill_no,
             'vat_no' => $this->vat_no,
-            'amount' => format_currency($this->amount ?? 0, $this->billUploadBatch->currency),
+            'amount' => format_currency($this->amount ?? 0, $batchCurrency),
             'amount_raw' => (float) ($this->amount ?? 0),
-            'approved_amount' => format_currency($this->approve_amount ?? 0, $this->billUploadBatch->currency),
+            'approved_amount' => format_currency($this->approve_amount ?? 0, $batchCurrency),
+            'claimable_amount' => $claimableAmount ? format_currency($claimableAmount, $batchCurrency) : null,
             'status' => $this->status,
             'is_valid' => $this->is_valid ?? true,
             'validation_error' => $this->reason_for_action,
@@ -31,24 +45,36 @@ class BillResource extends JsonResource
                 'bill' => $this->id,
                 'user' => auth('sanctum')->id(),
             ]),
-            'category' => new CategoryResource($this->whenLoaded('category')),
-            'billUploadBatch' => $this->whenLoaded('billUploadBatch', function () {
+            'billUploadBatch' => $this->whenLoaded('billUploadBatch', function () use ($billUploadBatch) {
                 return [
-                    'id' => $this->billUploadBatch->id,
-                    'title' => $this->billUploadBatch->title,
-                    'currency' => $this->billUploadBatch->currency,
-                    'category' => $this->billUploadBatch->category?->name,
+                    'id' => $billUploadBatch->id,
+                    'title' => $billUploadBatch->title,
+                    'currency' => $billUploadBatch->currency,
+                    'category' => $billUploadBatch->category?->name,
                 ];
             }),
             'vendorContact' => $this->whenLoaded('vendorContact', function () {
+                $vendorContact = $this->vendorContact;
+
                 return [
-                    'id' => $this->vendorContact->id,
-                    'company_name' => $this->vendorContact->company_name,
-                    'phone' => $this->vendorContact->phone,
+                    'id' => $vendorContact->id,
+                    'company_name' => $vendorContact->company_name,
+                    'phone' => $vendorContact->phone,
                 ];
             }),
             'created_at' => $this->created_at->format('M d, Y'),
             'updated_at' => $this->updated_at->format('M d, Y'),
         ];
+    }
+
+    public function getClaimableAmount(mixed $updatedCategoryLimit, float $billAmount): ?float
+    {
+        if (in_array($this->status->value, [BillStatus::VERIFIED->value, BillStatus::REIMBURSED->value])) {
+            return null;
+        }
+
+        return $updatedCategoryLimit === null
+            ? null
+            : min($updatedCategoryLimit, $billAmount);
     }
 }

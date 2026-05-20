@@ -93,9 +93,29 @@ class CategoryController extends Controller
                 $statusOrder
             )
             ->paginate(10);
+
         $currency = $bills->first()?->billUploadBatch?->currency;
 
-        return response()->json([
+        $category = Category::find($categoryId);
+        // monthly_limit is null when no limit is configured for this category
+        $categoryLimit = $category?->monthly_limit !== null ? (float) $category->monthly_limit : null;
+
+        // Sum approve_amount from VERIFIED bills only (all records, not just current page)
+        $approvedAmount = (float) Bill::where('user_id', $userId)
+            ->where('category_id', $categoryId)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->where('status', BillStatus::VERIFIED->value)
+            ->sum('approve_amount');
+
+        if ($categoryLimit === null) {
+            $updatedCategoryLimit = null;
+        } else {
+            $updatedCategoryLimit = max(0.0, $categoryLimit - $approvedAmount);
+        }
+
+        $request->attributes->set('updated_category_limit', $updatedCategoryLimit);
+
+        $response = [
             'success' => true,
             'message' => 'Category wise bills details fetched successfully',
             'total_amount' => format_currency($bills->sum('amount'), $currency ?? ''),
@@ -103,7 +123,9 @@ class CategoryController extends Controller
             'bill_count' => $bills->count(),
             'data' => BillResource::collection($bills),
             'meta' => pagination_response($bills),
-        ]);
+        ];
+
+        return response()->json($response);
     }
 
     public function getUserCategoryWiseBills(

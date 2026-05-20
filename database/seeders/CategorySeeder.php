@@ -9,40 +9,41 @@ class CategorySeeder extends Seeder
 {
     public function run(): void
     {
+        $monthlyLimit = 3000;
         Category::query()->insert([
             [
                 'name' => 'System Usage Fees',
-                'monthly_limit' => 30000,
+                'monthly_limit' => $monthlyLimit,
                 'is_active' => true,
             ],
             [
                 'name' => 'Entertainment Expenses',
-                'monthly_limit' => 30000,
+                'monthly_limit' => $monthlyLimit,
                 'is_active' => true,
             ],
             [
                 'name' => 'Travel and Transportation Expenses',
-                'monthly_limit' => 30000,
+                'monthly_limit' => $monthlyLimit,
                 'is_active' => true,
             ],
             [
                 'name' => 'Meeting Expenses',
-                'monthly_limit' => 30000,
+                'monthly_limit' => $monthlyLimit,
                 'is_active' => true,
             ],
             [
                 'name' => 'Supplies Expenses',
-                'monthly_limit' => 30000,
+                'monthly_limit' => $monthlyLimit,
                 'is_active' => true,
             ],
             [
                 'name' => 'Employee Welfare Expenses',
-                'monthly_limit' => 30000,
+                'monthly_limit' => $monthlyLimit,
                 'is_active' => true,
             ],
             [
                 'name' => 'Communication Expenses',
-                'monthly_limit' => 30000,
+                'monthly_limit' => $monthlyLimit,
                 'is_active' => true,
             ],
         ]);
