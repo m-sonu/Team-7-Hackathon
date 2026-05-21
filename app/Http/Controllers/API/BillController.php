@@ -6,14 +6,12 @@ use App\Actions\SendReimbursementNotificationToAdmin;
 use App\Actions\SubmitBillForReimburseAction;
 use App\DTOs\StoreBillDTO;
 use App\Enums\BillStatus;
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillStatusRequest;
 use App\Jobs\ProcessBillAiJob;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
-use App\Models\User;
 use App\Services\BillService;
 use App\Services\BillUploadBatchService;
 use Illuminate\Http\JsonResponse;
@@ -102,8 +100,8 @@ class BillController extends Controller
 
         $validated = $request->validate([
             'bill_no' => 'nullable|string|max:255',
-            'vat_no'  => 'nullable|string|max:255',
-            'amount'  => 'nullable|numeric|min:0',
+            'vat_no' => 'nullable|string|max:255',
+            'amount' => 'nullable|numeric|min:0',
         ]);
 
         $bill->update($validated);
@@ -145,28 +143,4 @@ class BillController extends Controller
             'data' => $bill,
         ]);
     }
-
-    /**
-     * Calculate the total claimable amount for a user.
-     */
-    public function getClaimableAmount($userId): JsonResponse
-    {
-        $user = User::findOrFail($userId);
-        $data = $this->billService->calculateAndEmailClaimableAmount($user);
-        return response()->json($data);
-    }
-
-   public function getClaimableAmountForEmployees(): JsonResponse
-{
-    User::where('role', UserRole::EMPLOYEE->value)
-        ->chunk(20, function ($users) {
-            foreach ($users as $user) {
-                $this->billService->calculateAndEmailClaimableAmount($user);
-            }
-        });
-
-    return response()->json([
-        'message' => 'Claimable amount processed for all employees.'
-    ]);
-}
 }
