@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiController;
 use App\Http\Resources\BillUploadBatchPreviewResource;
 use App\Models\BillUploadBatch;
 use App\Services\BillUploadBatchService;
 use Illuminate\Http\JsonResponse;
 
-class BillUploadBatchController extends Controller
+class BillUploadBatchController extends ApiController
 {
     public function __construct(
         protected BillUploadBatchService $service
@@ -23,9 +23,9 @@ class BillUploadBatchController extends Controller
 
         $previewData = $this->service->getBatchPreview($batch->id);
 
-        return response()->json([
-            'success' => true,
-            'data' => new BillUploadBatchPreviewResource($previewData),
-        ]);
+        return $this->sendResponse(
+            (new BillUploadBatchPreviewResource($previewData))->resolve(),
+            'success'
+        );
     }
 }

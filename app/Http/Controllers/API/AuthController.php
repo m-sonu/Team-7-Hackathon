@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiController;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\UserRegistrationRequest;
 use App\Services\UserService;
@@ -10,7 +10,7 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class AuthController extends Controller
+class AuthController extends ApiController
 {
     public function __construct(protected UserService $userService) {}
 
@@ -22,17 +22,9 @@ class AuthController extends Controller
         try {
             $data = $this->userService->registerUser($request->validated());
 
-            return response()->json([
-                'success' => true,
-                'message' => 'User registered successfully',
-                'data' => $data,
-            ], 201);
+            return $this->sendResponse($data, 'User registered successfully', 201);
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to register user',
-                'error' => config('app.debug') ? $e->getMessage() : 'An unexpected error occurred.',
-            ], 500);
+            return $this->sendError('Failed to register user', 500);
         }
     }
 
@@ -45,23 +37,12 @@ class AuthController extends Controller
             $data = $this->userService->loginUser($request->validated());
 
             if (! $data) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid credentials',
-                ], 401);
+                return $this->sendError('Invalid credentials', 401);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Login successful',
-                'data' => $data,
-            ]);
+            return $this->sendResponse($data, 'Login successful');
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred during login',
-                'error' => config('app.debug') ? $e->getMessage() : 'An unexpected error occurred.',
-            ], 500);
+            return $this->sendError('An error occurred during login', 500);
         }
     }
 
@@ -73,16 +54,9 @@ class AuthController extends Controller
         try {
             $this->userService->logoutUser($request->user());
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Logged out successfully',
-            ]);
+            return $this->sendResponse([], 'Logged out successfully');
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to log out',
-                'error' => config('app.debug') ? $e->getMessage() : 'An unexpected error occurred.',
-            ], 500);
+            return $this->sendError('Failed to log out', 500);
         }
     }
 }

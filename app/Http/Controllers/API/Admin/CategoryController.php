@@ -5,7 +5,7 @@ namespace App\Http\Controllers\API\Admin;
 use App\Actions\Category\DestroyCategoryAction;
 use App\Actions\Category\StoreCategoryAction;
 use App\Actions\Category\UpdateCategoryAction;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiController;
 use App\Http\Requests\Admin\UserCategoryBillsRequest;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Resources\BillResource;
@@ -18,7 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
-class CategoryController extends Controller
+class CategoryController extends ApiController
 {
     public function __construct(
         private AdminCategoryService $categoryService,
@@ -29,32 +29,28 @@ class CategoryController extends Controller
     {
         $category = $action->execute($request->validated());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Category created successfully',
-            'data' => new CategoryResource($category),
-        ], 201);
+        return $this->sendResponse(
+            (new CategoryResource($category))->resolve(),
+            'Category created successfully',
+            201
+        );
     }
 
     public function update(StoreCategoryRequest $request, Category $category, UpdateCategoryAction $action): JsonResponse
     {
         $category = $action->execute($category, $request->validated());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Category updated successfully',
-            'data' => new CategoryResource($category),
-        ]);
+        return $this->sendResponse(
+            (new CategoryResource($category))->resolve(),
+            'Category updated successfully'
+        );
     }
 
     public function destroy(Category $category, DestroyCategoryAction $action): JsonResponse
     {
         $action->execute($category);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Category deleted successfully',
-        ]);
+        return $this->sendResponse([], 'Category deleted successfully');
     }
 
     public function getUserCategoryWiseBillDetails(Request $request, int $userId, int $categoryId): JsonResponse
@@ -70,15 +66,13 @@ class CategoryController extends Controller
 
         $request->attributes->set('updated_category_limit', $updatedCategoryLimit);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Category wise bills details fetched successfully',
+        return $this->sendResponse([
             'total_amount' => format_currency($bills->sum('amount'), $currency ?? ''),
             'approve_amount' => format_currency($bills->sum('approve_amount'), $currency ?? ''),
             'bill_count' => $bills->count(),
             'data' => BillResource::collection($bills),
             'meta' => pagination_response($bills),
-        ]);
+        ], 'Category wise bills details fetched successfully');
     }
 
     public function getUserCategoryWiseBills(UserCategoryBillsRequest $request, int $userId): JsonResponse
@@ -89,11 +83,9 @@ class CategoryController extends Controller
             year: $request->year(),
         );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User category wise bills fetched successfully',
+        return $this->sendResponse([
             'user_id' => $userId,
             'data' => CategoryBillResource::collection($results),
-        ]);
+        ], 'User category wise bills fetched successfully');
     }
 }

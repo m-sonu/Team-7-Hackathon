@@ -6,7 +6,7 @@ use App\Actions\SendReimbursementNotificationToAdmin;
 use App\Actions\SubmitBillForReimburseAction;
 use App\DTOs\StoreBillDTO;
 use App\Enums\BillStatus;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiController;
 use App\Http\Requests\StoreBillRequest;
 use App\Http\Requests\UpdateBillStatusRequest;
 use App\Jobs\ProcessBillAiJob;
@@ -18,7 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
-class BillController extends Controller
+class BillController extends ApiController
 {
     public function __construct(protected BillService $billService) {}
 
@@ -29,10 +29,10 @@ class BillController extends Controller
     {
         $bills = $this->billService->getFilteredBills($request->all());
 
-        return response()->json([
-            'success' => true,
-            'data' => $bills,
-        ]);
+        return $this->sendResponse(
+            array_merge($bills->items(), ['meta' => pagination_response($bills)]),
+            'success'
+        );
     }
 
     public function store(StoreBillRequest $request, BillUploadBatchService $batchService): JsonResponse
@@ -43,11 +43,11 @@ class BillController extends Controller
 
         ProcessBillAiJob::dispatch($dto, $batch);
 
-        return response()->json([
-            'message' => 'Bills have been queued for AI processing.',
-            'batch_id' => $batch->id,
-            'title' => $batch->title,
-        ], 202);
+        return $this->sendResponse(
+            ['batch_id' => $batch->id, 'title' => $batch->title],
+            'Bills have been queued for AI processing.',
+            202
+        );
     }
 
     /**
@@ -63,10 +63,10 @@ class BillController extends Controller
         $bills = $submitAction->execute($batch);
 
         if ($bills->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => "There are no bills to send reimbursement notification for {$batch->id}",
-            ], Response::HTTP_BAD_REQUEST);
+            return $this->sendError(
+                "There are no bills to send reimbursement notification for {$batch->id}",
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
         $notifyAction->execute(
@@ -75,10 +75,7 @@ class BillController extends Controller
             batchId: $batch->id
         );
 
-        return response()->json([
-            'success' => true,
-            'message' => "Successfully submitted {$bills->count()} bills for reimbursement.",
-        ]);
+        return $this->sendResponse([], "Successfully submitted {$bills->count()} bills for reimbursement.");
     }
 
     /**
@@ -95,7 +92,7 @@ class BillController extends Controller
     public function update(Request $request, Bill $bill, BillUploadBatchService $batchService): JsonResponse
     {
         if ($bill->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return $this->sendError('Unauthorized', 403);
         }
 
         $validated = $request->validate([
@@ -107,10 +104,7 @@ class BillController extends Controller
         $bill->update($validated);
         $batchService->validateAndSetBillStatuses($bill->billUploadBatch);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Bill updated successfully.',
-        ]);
+        return $this->sendResponse([], 'Bill updated successfully.');
     }
 
     /**
@@ -119,15 +113,12 @@ class BillController extends Controller
     public function destroy(Bill $bill): JsonResponse
     {
         if ($bill->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return $this->sendError('Unauthorized', 403);
         }
 
         $bill->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Bill removed successfully.',
-        ]);
+        return $this->sendResponse([], 'Bill removed successfully.');
     }
 
     /**
@@ -137,10 +128,6 @@ class BillController extends Controller
     {
         $bill = $this->billService->changeBillStatus($bill, BillStatus::from($request->status));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Bill status updated successfully',
-            'data' => $bill,
-        ]);
+        return $this->sendResponse($bill->toArray(), 'Bill status updated successfully');
     }
 }

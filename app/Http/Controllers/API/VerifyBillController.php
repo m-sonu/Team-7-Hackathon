@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Enums\BillStatus;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiController;
 use App\Http\Requests\API\VerifyBillRequest;
 use App\Jobs\BulkReimburseBillsJob;
 use App\Models\Bill;
@@ -14,7 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class VerifyBillController extends Controller
+class VerifyBillController extends ApiController
 {
     /**
      * Verify or reject an individual bill.
@@ -25,8 +25,7 @@ class VerifyBillController extends Controller
 
         $currency = $bill->billUploadBatch?->currency ?? 'YEN';
 
-        $baseResponse = [
-            'success' => true,
+        $baseData = [
             'remaining_category_amount' => format_currency(0, $currency),
             'already_approved' => format_currency(0, $currency),
             'total_amount' => format_currency($bill->amount, $currency),
@@ -36,29 +35,26 @@ class VerifyBillController extends Controller
 
         $settledStatuses = [BillStatus::VERIFIED->value, BillStatus::REJECTED->value, BillStatus::REIMBURSED->value];
         if (in_array($bill->status, $settledStatuses)) {
-            return response()->json([
-                ...$baseResponse,
-                'message' => 'Bill has already been verified or rejected.',
-                'approve_amount' => format_currency($bill->approve_amount, $currency),
-            ]);
+            return $this->sendResponse(
+                array_merge($baseData, ['approve_amount' => format_currency($bill->approve_amount, $currency)]),
+                'Bill has already been verified or rejected.'
+            );
         }
 
         if (in_array($request->status, [
             BillStatus::INVALID->value,
             BillStatus::REJECTED->value,
         ])) {
-
             $bill->update([
                 'status' => BillStatus::REJECTED->value,
                 'approve_amount' => 0,
                 'reason_for_action' => $request->reason_for_action,
             ]);
 
-            return response()->json([
-                ...$baseResponse,
-                'message' => 'Bill has already been verified or rejected.',
-                'approve_amount' => format_currency(0, $currency),
-            ]);
+            return $this->sendResponse(
+                array_merge($baseData, ['approve_amount' => format_currency(0, $currency)]),
+                'Bill has already been verified or rejected.'
+            );
         }
 
         $bill->update([
@@ -67,11 +63,10 @@ class VerifyBillController extends Controller
             'reason_for_action' => $request->reason_for_action ?? '',
         ]);
 
-        return response()->json([
-            ...$baseResponse,
-            'message' => "Bill has been {$request->status}.",
-            'approve_amount' => format_currency($bill->amount, $currency),
-        ]);
+        return $this->sendResponse(
+            array_merge($baseData, ['approve_amount' => format_currency($bill->amount, $currency)]),
+            "Bill has been {$request->status}."
+        );
     }
 
     /**
@@ -83,26 +78,17 @@ class VerifyBillController extends Controller
         $categoryMonthlyIds = CategoryMonthlyPivot::query()->where('month_year', Carbon::now()->format('Y-m'))->pluck('id');
 
         if ($categoryMonthlyIds->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Action only allowed for the current billing month.',
-            ], Response::HTTP_FORBIDDEN);
+            return $this->sendError('Action only allowed for the current billing month.', Response::HTTP_FORBIDDEN);
         }
 
         $billsExits = Bill::query()->whereIn('category_monthly_pivot_id', $categoryMonthlyIds->toArray())->where('status', BillStatus::VERIFIED->value);
-        if (!$billsExits->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'There are no bills to reimburse.',
-            ], Response::HTTP_BAD_REQUEST);
+        if (! $billsExits->exists()) {
+            return $this->sendError('There are no bills to reimburse.', Response::HTTP_BAD_REQUEST);
         }
 
         BulkReimburseBillsJob::dispatch($categoryMonthlyIds->toArray());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Bulk reimbursement process has been queued.',
-        ]);
+        return $this->sendResponse([], 'Bulk reimbursement process has been queued.');
     }
 
     /**
@@ -122,18 +108,12 @@ class VerifyBillController extends Controller
             ->where('status', BillStatus::VERIFIED->value)
             ->exists();
 
-        if (!$hasVerifiedBills) {
-            return response()->json([
-                'success' => false,
-                'message' => 'There are no verified bills to reimburse.',
-            ], Response::HTTP_BAD_REQUEST);
+        if (! $hasVerifiedBills) {
+            return $this->sendError('There are no verified bills to reimburse.', Response::HTTP_BAD_REQUEST);
         }
 
         BulkReimburseBillsJob::dispatch([$pivotId]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Reimbursement process has been queued.',
-        ]);
+        return $this->sendResponse([], 'Reimbursement process has been queued.');
     }
 }

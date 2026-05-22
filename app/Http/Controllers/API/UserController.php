@@ -4,7 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Enums\AiProcessStatus;
 use App\Enums\BillStatus;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiController;
 use App\Http\Requests\EmployeeUserBillsRequest;
 use App\Http\Resources\BillResource;
 use App\Http\Resources\BillUploadBatchResource;
@@ -22,7 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-class UserController extends Controller
+class UserController extends ApiController
 {
     public function __construct(
         private AdminBillService $adminBillService,
@@ -31,24 +31,21 @@ class UserController extends Controller
     /**
      * Display the specified user.
      */
-    public function show(int $id): UserResource|JsonResponse
+    public function show(int $id): JsonResponse
     {
         $user = User::find($id);
         if (! $user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found',
-            ], 404);
+            return $this->sendError('User not found', 404);
         }
 
-        return new UserResource($user);
+        return $this->sendResponse((new UserResource($user))->resolve(), 'success');
     }
 
     public function employeeDashboard($id)
     {
         $user = User::find($id);
         if (! $user) {
-            return response()->json(['success' => false, 'message' => 'User not found'], 404);
+            return $this->sendError('User not found', 404);
         }
 
         // Resolve the current billing cycle month_year using the same logic as BillUploadBatchService
@@ -100,9 +97,7 @@ class UserController extends Controller
             ->groupBy('category.id', 'category.name', 'batch.currency')
             ->paginate(10);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Employee dashboard fetched',
+        return $this->sendResponse([
             'total_bills' => (int) $stats->total_bills,
             'total_approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
             'amount' => format_currency($stats->total_amount ?? 0, $currency),
@@ -110,17 +105,14 @@ class UserController extends Controller
             'current_month_verified_bills' => (int) $stats->verified_bills_count,
             'category_wise_amounts' => EmployeeDashboardResource::collection($categoryWiseAmounts),
             'meta' => pagination_response($categoryWiseAmounts),
-        ]);
+        ], 'Employee dashboard fetched');
     }
 
     public function getUserBills(Request $request, $id)
     {
         $user = User::find($id);
         if (! $user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found',
-            ], 404);
+            return $this->sendError('User not found', 404);
         }
 
         $batches = BillUploadBatch::query()
@@ -170,12 +162,13 @@ class UserController extends Controller
             ->orderByDesc('created_at')
             ->paginate($request->input('per_page', 10));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User bills fetched successfully',
-            'data' => BillUploadBatchResource::collection($batches),
-            'meta' => pagination_response($batches),
-        ]);
+        return $this->sendResponse(
+            array_merge(
+                BillUploadBatchResource::collection($batches)->toArray(request()),
+                ['meta' => pagination_response($batches)]
+            ),
+            'User bills fetched successfully'
+        );
     }
 
     public function getUserBillsDetails(Request $request, $id)
@@ -188,10 +181,7 @@ class UserController extends Controller
             ->find($id);
 
         if (! $batch) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Batch not found',
-            ], 404);
+            return $this->sendError('Batch not found', 404);
         }
 
         // 2. Paginated bills
@@ -201,9 +191,7 @@ class UserController extends Controller
             ->paginate($perPage);
 
         // 3. Response
-        return response()->json([
-            'success' => true,
-            'message' => 'Bills details fetched successfully',
+        return $this->sendResponse([
             'id' => $batch->id,
             'title' => $batch->title,
             'category' => $batch->category?->name,
@@ -214,7 +202,7 @@ class UserController extends Controller
             ),
             'data' => BillResource::collection($bills),
             'meta' => pagination_response($bills),
-        ]);
+        ], 'Bills details fetched successfully');
     }
 
     public function getEmployeeBills(EmployeeUserBillsRequest $request): JsonResponse
@@ -234,15 +222,13 @@ class UserController extends Controller
             perPage: $request->integer('per_page', 15),
         );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'employee bills fetched successfully',
+        return $this->sendResponse([
             'month' => $month,
             'year' => $year,
             'start_date' => $startDate->toDateString(),
             'end_date' => $endDate->toDateString(),
             'data' => EmployeeBillResource::collection($users),
             'meta' => pagination_response($users),
-        ]);
+        ], 'employee bills fetched successfully');
     }
 }
