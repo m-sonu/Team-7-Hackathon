@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Actions\SendReimbursementNotificationToAdmin;
-use App\Actions\SubmitBillForReimburseAction;
 use App\DTOs\StoreBillDTO;
 use App\Enums\BillStatus;
 use App\Http\Controllers\ApiController;
@@ -48,34 +46,6 @@ class BillController extends ApiController
             'Bills have been queued for AI processing.',
             202
         );
-    }
-
-    /**
-     * Submit all pending bills in a batch for reimbursement.
-     */
-    public function submitBatch(
-        BillUploadBatch $batch,
-        SubmitBillForReimburseAction $submitAction,
-        SendReimbursementNotificationToAdmin $notifyAction,
-    ): JsonResponse {
-        $this->authorize('view', $batch);
-
-        $bills = $submitAction->execute($batch);
-
-        if ($bills->isEmpty()) {
-            return $this->sendError(
-                "There are no bills to send reimbursement notification for {$batch->id}",
-                Response::HTTP_BAD_REQUEST
-            );
-        }
-
-        $notifyAction->execute(
-            requester: $batch->user,
-            bills: $bills,
-            batchId: $batch->id
-        );
-
-        return $this->sendResponse([], "Successfully submitted {$bills->count()} bills for reimbursement.");
     }
 
     /**
