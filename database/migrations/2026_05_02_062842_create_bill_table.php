@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\BillStatus;
 use App\Models\Bill;
 use App\Models\BillUploadBatch;
 use Illuminate\Database\Migrations\Migration;
@@ -26,9 +27,9 @@ return new class extends Migration
                 ->after('category_monthly_pivot_id')
                 ->constrained(BillUploadBatch::TABLE_NAME)
                 ->onDelete('set null');
-            $table->string('status')->default('pending');
+            $table->string('status')->default(BillStatus::PENDING->value);
             $table->string('reason_for_action')->nullable();
-            $table->text('raw_text')->nullable();
+            $table->text('raw_data')->nullable();
             $table->timestamps();
 
             $table->index('user_id');

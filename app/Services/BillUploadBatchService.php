@@ -68,11 +68,12 @@ class BillUploadBatchService
         $seenInBatch = [];
 
         // Fetch all existing (vat_no, bill_no) pairs for this user, excluding current batch bills
+
         $globalDuplicates = Bill::query()
             ->where('user_id', $batch->user_id)
             ->whereNotIn('id', $batch->bills->pluck('id'))
-            ->whereNotNull('vat_no')
-            ->whereNotNull('bill_no')
+            ->whereNotNull(['vat_no', 'bill_no'])
+            ->where('status', '<>', BillStatus::FAILED->value)
             ->select(['vat_no', 'bill_no'])
             ->get()
             ->map(fn (Bill $b) => "{$b->vat_no}_{$b->bill_no}")
@@ -83,19 +84,19 @@ class BillUploadBatchService
             $isValid = true;
             $reason = null;
 
-            // Rule 1: Data Integrity
+            // Rule 1: Missing or unreadbale VAT/Bill number
             if (empty($bill->vat_no) || empty($bill->bill_no)) {
                 $isValid = false;
                 $reason = 'Missing or unreadable VAT/Bill number';
             } else {
                 $key = "{$bill->vat_no}_{$bill->bill_no}";
-
-                // Rule 3: Batch Collision
+                logger('k cha', [isset($globalDuplicates[$key]), $globalDuplicates,$bill->status,in_array($bill->status, [BillStatus::PENDING, BillStatus::INVALID])]);
+                // Rule 2: Batch Collision
                 if (isset($seenInBatch[$key])) {
                     $isValid = false;
                     $reason = 'Duplicate bill within the same batch';
                 }
-                // Rule 2: Global Uniqueness
+                // Rule 3: Global Uniqueness
                 elseif (isset($globalDuplicates[$key])) {
                     $isValid = false;
                     $reason = 'Bill already exists in previous submissions';
@@ -106,6 +107,7 @@ class BillUploadBatchService
 
             // Only update bills that haven't been submitted yet
             if (in_array($bill->status, [BillStatus::PENDING, BillStatus::INVALID])) {
+                logger('hello', [$bill->status->value]);
                 $bill->update([
                     'status' => $isValid ? BillStatus::PENDING : BillStatus::INVALID,
                     'reason_for_action' => $reason,

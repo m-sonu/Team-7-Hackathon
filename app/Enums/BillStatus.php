@@ -5,6 +5,8 @@ namespace App\Enums;
 enum BillStatus: string
 {
     case PENDING = 'pending'; //  status is set for valid bill until employee submits for reimbursement
+
+    case FAILED = 'failed'; //  status is set for valid bill until employee submits for reimbursement
     case UNDER_REVIEW = 'under review'; // status is set for valid bill after employee submits for reimbursement
     case INVALID = 'invalid'; // bill is invalid due to some reason
     case REJECTED = 'rejected'; // admin rejects bill

@@ -5,7 +5,7 @@ namespace App\DTOs;
 class AiParsedBillDTO
 {
     public function __construct(
-        public readonly array $bill,
+        public readonly ?array $bill,
         public readonly array $vendorContact = []
     ) {}
 

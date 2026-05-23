@@ -7,6 +7,7 @@ use App\Actions\StoreBillAction;
 use App\DTOs\AiParsedBillDTO;
 use App\DTOs\StoreBillDTO;
 use App\Enums\AiProcessStatus;
+use App\Enums\BillStatus;
 use App\Models\BillUploadBatch;
 use App\Services\BillUploadBatchService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -36,10 +37,9 @@ class ProcessBillAiJob implements ShouldQueue
      */
     public function handle(StoreBillAction $storeBillAction, NotifyUserOfBatchStatusAction $notifyAction): void
     {
-        $status = AiProcessStatus::SUCCESS->value;
-
+        $aiProcessStatus = AiProcessStatus::SUCCESS->value;
         try {
-            DB::transaction(function () use ($storeBillAction, &$status) {
+            DB::transaction(function () use ($storeBillAction, &$aiProcessStatus) {
                 foreach ($this->storeBillDto->files as $file) {
                     $filePath = $file['path'];
                     $originalName = $file['original_name'];
@@ -47,31 +47,30 @@ class ProcessBillAiJob implements ShouldQueue
                     try {
                         $fileContents = Storage::get($filePath);
 
-                        $response = Http::timeout(300)->attach(
-                            'file',
-                            $fileContents,
-                            $originalName
-                        )->post(config('services.tanuki.ai_url'));
+                        $response = Http::connectTimeout(5)
+                            ->timeout(300)
+                            ->attach('file', $fileContents, $originalName)
+                            ->post(config('services.tanuki.ai_url'));
 
-                        if ($response->failed()) {
-                            Log::error("AI Parsing failed for {$filePath}: ".$response->body());
-
-                            $status = AiProcessStatus::FAILED->value;
-                            break;
-                        }
+                        $status = BillStatus::PENDING->value;
+                        $reasonForAction = null;
 
                         if (! $response->json('success')) {
-                            Log::error("AI Parsing failed for {$filePath}. Error Code: ".$response->json('error_code').' - '.$response->json('message'));
-
-                            $status = AiProcessStatus::FAILED->value;
-                            logger($status);
-                            // Optional: Notify the UI or admin table that this file needs manual entry
-                            break;
+                            $errorDetail = $response->json('error_code')
+                                ? $response->json('error_code').' - '.$response->json('message')
+                                : 'Non-JSON or malformed response: '.$response->body();
+                            Log::error("AI Parsing return null response for {$filePath}. ".$errorDetail);
+                            $status = BillStatus::FAILED->value;
+                            $reasonForAction = $response->json('message');
                         }
 
                         $aiData = $response->json('data');
-
                         logger()->info('This is data from ai : ', [$aiData]);
+
+                        $aiData['bill']['status'] = $status;
+                        $aiData['bill']['reason_for_action'] = $reasonForAction;
+
+
                         $aiDTO = AiParsedBillDTO::fromAiResponse($aiData);
 
                         $storeBillAction->execute(
@@ -82,17 +81,16 @@ class ProcessBillAiJob implements ShouldQueue
                             $this->batch
                         );
                     } catch (\Exception $e) {
-                        logger($status, [2]);
+                        $aiProcessStatus = AiProcessStatus::FAILED->value; // ← only place it flips
                         Log::error("Failed to process bill AI for file {$filePath}: ".$e->getMessage());
                     }
                 }
             });
-
         } finally {
             $batchService = app(BillUploadBatchService::class);
             $batchService->validateAndSetBillStatuses($this->batch);
 
-            $this->batch->update(['ai_processing' => $status]);
+            $this->batch->update(['ai_processing' => $aiProcessStatus]);
             $notifyAction->execute($this->batch);
         }
     }

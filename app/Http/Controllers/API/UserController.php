@@ -66,6 +66,7 @@ class UserController extends ApiController
         // Primary stats — scoped by pivot IDs, no batch join required
         $stats = Bill::where('user_id', $user->id)
             ->whereIn('category_monthly_pivot_id', $pivotIds)
+            ->whereNotIn('status', [BillStatus::FAILED, BillStatus::INVALID])
             ->selectRaw('
                 COUNT(id)                                                          AS total_bills,
                 SUM(approve_amount)                                                AS total_approved_amount,
@@ -187,6 +188,7 @@ class UserController extends ApiController
         // 2. Paginated bills
         $bills = Bill::where('bill_upload_batch_id', $id)
             ->with(['billUploadBatch', 'vendorContact'])
+            ->whereNotIn('status', [BillStatus::INVALID->value, BillStatus::FAILED->value])
             ->latest()
             ->paginate($perPage);
 
