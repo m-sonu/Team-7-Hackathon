@@ -15,6 +15,7 @@ class StoreCategoryRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
+            'jp_name' => 'nullable|string|max:255',
             'monthly_limit' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ];

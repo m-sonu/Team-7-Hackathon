@@ -41,6 +41,7 @@ class BillResource extends JsonResource
             'status' => $this->status,
             'is_valid' => $this->is_valid ?? true,
             'validation_error' => $this->reason_for_action,
+            'reason_for_action' => $this->reason_for_action,
             'file_preview_url' => URL::signedRoute('bills.file', [
                 'bill' => $this->id,
                 'user' => auth('sanctum')->id(),

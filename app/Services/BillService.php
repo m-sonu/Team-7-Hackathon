@@ -3,13 +3,13 @@
 namespace App\Services;
 
 use App\Enums\BillStatus;
+use App\Enums\UserRole;
 use App\Mail\ClaimableAmountReportMail;
 use App\Models\Bill;
 use App\Models\User;
-use App\Enums\UserRole;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Mail;
-use Carbon\Carbon;
 
 class BillService
 {
@@ -60,7 +60,7 @@ class BillService
         $endDate = $date->copy()->day(25)->endOfDay();
 
         // For now, we consider all verified bills as claimable
-        $bills = Bill::with(['category','billUploadBatch'])->where('user_id', $user->id)
+        $bills = Bill::with(['category', 'billUploadBatch'])->where('user_id', $user->id)
             ->where('created_at', '>=', $startDate)
             ->where('created_at', '<=', $endDate)
             ->where('status', BillStatus::VERIFIED)

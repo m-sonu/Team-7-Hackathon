@@ -89,13 +89,14 @@ class UserController extends ApiController
             ->whereIn('bill.category_monthly_pivot_id', $pivotIds)
             ->select([
                 'category.id as category_id',
-                'category.name as category',
+                'category.name as category_en',
+                'category.jp_name as category_jp',
                 'batch.currency as currency',
                 DB::raw('SUM(bill.approve_amount) as approved_amount'),
                 DB::raw('SUM(bill.amount) as total_amount'),
                 DB::raw('COUNT(bill.id) as bill_count'),
             ])
-            ->groupBy('category.id', 'category.name', 'batch.currency')
+            ->groupBy('category.id', 'category.name', 'category.jp_name', 'batch.currency')
             ->paginate(10);
 
         return $this->sendResponse([
@@ -135,7 +136,7 @@ class UserController extends ApiController
             ->when(
                 $request->filled('status'),
                 fn ($q) => $q->whereHas('bills', fn ($b) => $b->where('status', $request->status)),
-                fn ($q) => $q->whereHas('bills', fn ($b) => $b->whereNot('status', BillStatus::INVALID->value)),
+                fn ($q) => $q->whereHas('bills', fn ($b) => $b->whereNotIn('status', [BillStatus::INVALID->value,BillStatus::FAILED->value])),
             )
             ->when(
                 $request->filled('start_date') && $request->filled('end_date'),
@@ -145,6 +146,7 @@ class UserController extends ApiController
                 ]),
                 function ($q) use ($request) {
                     $monthInput = $request->input('month');
+                    logger("calculate months");
                     if ($monthInput && str_contains((string) $monthInput, '-')) {
                         $date = Carbon::createFromFormat('Y-m', $monthInput)->startOfMonth();
                     } else {
@@ -161,6 +163,7 @@ class UserController extends ApiController
                 }
             )
             ->orderByDesc('created_at')
+//            ->whereNotIn('status', [BillStatus::INVALID->value, BillStatus::FAILED->value])
             ->paginate($request->input('per_page', 10));
 
         return $this->sendResponse(
@@ -209,14 +212,21 @@ class UserController extends ApiController
 
     public function getEmployeeBills(EmployeeUserBillsRequest $request): JsonResponse
     {
-        $month = $request->integer('month', now()->month);
-        $year = now()->year;
-        $selectedMonth = Carbon::create($year, $month, 1);
-        $startDate = $selectedMonth->copy()->subMonth()->day(26)->startOfDay();
-        $endDate = $selectedMonth->copy()->day(config('app.billing_cutoff', 25))->endOfDay();
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        if ($startDate && $endDate) {
+            $startDate = Carbon::parse($startDate)->startOfDay();
+            $endDate = Carbon::parse($endDate)->endOfDay();
+
+        } else {
+            $month = $request->integer('month', now()->month);
+            $year = now()->year;
+            $selectedMonth = Carbon::create($year, $month, 1);
+            $startDate = $selectedMonth->copy()->subMonth()->day(26)->startOfDay();
+            $endDate = $selectedMonth->copy()->day(config('app.billing_cutoff', 25))->endOfDay();
+        }
 
         $status = BillStatus::tryFrom((string) $request->input('status', ''));
-
         $users = $this->adminBillService->getEmployeeBillsSummary(
             startDate: $startDate,
             endDate: $endDate,
@@ -225,8 +235,6 @@ class UserController extends ApiController
         );
 
         return $this->sendResponse([
-            'month' => $month,
-            'year' => $year,
             'start_date' => $startDate->toDateString(),
             'end_date' => $endDate->toDateString(),
             'data' => EmployeeBillResource::collection($users),

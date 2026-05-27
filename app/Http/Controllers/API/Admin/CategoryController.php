@@ -15,7 +15,6 @@ use App\Models\Category;
 use App\Services\Admin\AdminCategoryService;
 use App\Services\AdminBillService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class CategoryController extends ApiController
@@ -53,12 +52,16 @@ class CategoryController extends ApiController
         return $this->sendResponse([], 'Category deleted successfully');
     }
 
-    public function getUserCategoryWiseBillDetails(Request $request, int $userId, int $categoryId): JsonResponse
+    public function getUserCategoryWiseBillDetails(UserCategoryBillsRequest $request, int $userId, int $categoryId): JsonResponse
     {
-        $month = (int) $request->input('month', Carbon::now()->month);
-        $year = (int) $request->input('year', Carbon::now()->year);
-
-        $result = $this->categoryService->getCategoryBillDetails($userId, $categoryId, $month, $year);
+        $result = $this->categoryService->getCategoryBillDetails(
+            userId: $userId,
+            categoryId: $categoryId,
+            month: $request->month(),
+            year: $request->year(),
+            startDate: $request->startDate(),
+            endDate: $request->endDate(),
+        );
 
         $bills = $result['bills'];
         $currency = $result['currency'];
@@ -81,6 +84,8 @@ class CategoryController extends ApiController
             userId: $userId,
             month: $request->month(),
             year: $request->year(),
+            startDate: $request->startDate(),
+            endDate: $request->endDate(),
         );
 
         return $this->sendResponse([

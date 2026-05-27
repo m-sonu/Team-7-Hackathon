@@ -14,11 +14,15 @@ class AdminCategoryService
         int $userId,
         int $categoryId,
         int $month,
-        int $year
+        int $year,
+        ?Carbon $startDate = null,
+        ?Carbon $endDate = null,
     ): array {
-        $date = Carbon::create($year, $month, 1);
-        $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
-        $endDate = $date->copy()->day(25)->endOfDay();
+        if ($startDate === null || $endDate === null) {
+            $date = Carbon::create($year, $month, 1);
+            $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
+            $endDate = $date->copy()->day(25)->endOfDay();
+        }
 
         $statusOrder = [
             BillStatus::UNDER_REVIEW->value,

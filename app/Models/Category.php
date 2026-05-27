@@ -18,6 +18,7 @@ class Category extends Model
 
     protected $fillable = [
         'name',
+        'jp_name',
         'monthly_limit',
         'is_active',
     ];

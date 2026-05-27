@@ -18,7 +18,10 @@ class EmployeeDashboardResource extends JsonResource
         
         return [
             'category_id' => $this->category_id,
-            'category' => $this->category,
+            'category' => [
+                'en' => $this->category_en,
+                'jp' => $this->category_jp ?? '',
+            ],
             'approved_amount' => format_currency($this->approved_amount, $this->currency),
             'amount' => format_currency($this->total_amount, $this->currency),
             'bill_count' => (int) $this->bill_count,

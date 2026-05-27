@@ -7,7 +7,7 @@ if (! function_exists('format_currency')) {
     {
         return match (strtoupper($currency)) {
             Currency::YEN->value => '¥ '.number_format($amount,2),
-            Currency::NRP->value => '₨  '.number_format($amount,2),
+            Currency::NPR->value => '₨  '.number_format($amount,2),
             Currency::USD->value => '$ '.number_format($amount,2),
             default => number_format($amount),
         };

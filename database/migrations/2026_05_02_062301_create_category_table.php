@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->decimal('monthly_limit', 8, 2)->default(0.00);
             $table->boolean('is_active')->default(true);
+            $table->string('jp_name')->nullable();
             $table->timestamps();
 
             $table->index('name');

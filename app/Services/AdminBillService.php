@@ -47,11 +47,18 @@ class AdminBillService
             ->paginate($perPage);
     }
 
-    public function getCategoryWiseBillsForUser(int $userId, int $month, int $year): Collection
-    {
-        $date = Carbon::create($year, $month, 1);
-        $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
-        $endDate = $date->copy()->day(25)->endOfDay();
+    public function getCategoryWiseBillsForUser(
+        int $userId,
+        int $month,
+        int $year,
+        ?Carbon $startDate = null,
+        ?Carbon $endDate = null,
+    ): Collection {
+        if ($startDate === null || $endDate === null) {
+            $date = Carbon::create($year, $month, 1);
+            $startDate = $date->copy()->subMonth()->day(26)->startOfDay();
+            $endDate = $date->copy()->day(25)->endOfDay();
+        }
 
         $validStatuses = BillStatus::adminBillStatuses();
         $statusList = implode("','", $validStatuses);
@@ -59,7 +66,7 @@ class AdminBillService
         return DB::table('bill')
             ->where('bill.user_id', $userId)
             ->whereIn('bill.status', $validStatuses)
-            ->whereBetween('bill.created_at', [$startDate, $endDate])
+//            ->whereBetween('bill.created_at', [$startDate, $endDate])
             ->join('category', 'category.id', '=', 'bill.category_id')
             ->leftJoin('bill_upload_batch as batch', function ($join) use ($userId, $startDate, $endDate) {
                 $join->on('batch.id', '=', DB::raw(

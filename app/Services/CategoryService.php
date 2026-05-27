@@ -9,7 +9,7 @@ class CategoryService
 {
     public function getCategories(): LengthAwarePaginator
     {
-        return Category::select('id', 'name', 'monthly_limit', 'is_active')
+        return Category::select('id', 'name',  'jp_name', 'monthly_limit', 'is_active')
             ->orderBy('name', 'asc')
             ->paginate(10);
     }
