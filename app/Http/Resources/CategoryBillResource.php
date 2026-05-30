@@ -11,7 +11,10 @@ class CategoryBillResource extends JsonResource
     {
         return [
             'category_id' => $this->category_id,
-            'category_name' => $this->category_name,
+            'category' => [
+                'en' => $this->category_name,
+                'jp' => $this->category_jp_name,
+            ],
             'total_amount' => format_currency($this->total_amount, $this->currency ?? ''),
             'approved_amount' => format_currency($this->approved_amount, $this->currency ?? ''),
             'bill_count' => $this->bill_count,

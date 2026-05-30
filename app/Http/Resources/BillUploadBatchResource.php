@@ -19,7 +19,10 @@ class BillUploadBatchResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'category' => $this->category?->name,
+            'category' => $this->category ? [
+                'en' => $this->category->name,
+                'jp' => $this->category->jp_name,
+            ] : null,
             'created_date' => $this->created_at->format('M d Y'),
             'approved_amount' => \format_currency($this->bills_sum_approve_amount ?? 0, $this->currency),
             'amount' => \format_currency($this->bills_sum_amount ?? 0, $this->currency),

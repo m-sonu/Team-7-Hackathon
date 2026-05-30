@@ -83,6 +83,7 @@ class AdminBillService
             MAX(bill.updated_at)         AS updated_at,
             bill.category_id,
             category.name                AS category_name,
+            category.jp_name             AS category_jp_name,
             COUNT(bill.id)               AS bill_count,
             SUM(CASE WHEN bill.status IN ('{$statusList}')
                 THEN bill.amount ELSE 0 END)         AS total_amount,
@@ -105,7 +106,7 @@ class AdminBillService
                 LIMIT 1
             ) AS highest_status
         ", [$userId, $startDate, $endDate])
-            ->groupBy('bill.category_id', 'category.name', 'batch.currency')
+            ->groupBy('bill.category_id', 'category.name', 'category.jp_name', 'batch.currency')
             ->get();
     }
 }
