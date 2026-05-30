@@ -105,7 +105,7 @@ class UserController extends ApiController
             'amount' => format_currency($stats->total_amount ?? 0, $currency),
             'approved_amount' => format_currency($stats->total_approved_amount ?? 0, $currency),
             'current_month_verified_bills' => (int) $stats->verified_bills_count,
-            'category_wise_amounts' => EmployeeDashboardResource::collection($categoryWiseAmounts),
+            'category_wise_amounts' => EmployeeDashboardResource::collection($categoryWiseAmounts)->toArray(request()),
             'meta' => pagination_response($categoryWiseAmounts),
         ], 'Employee dashboard fetched');
     }
@@ -146,13 +146,17 @@ class UserController extends ApiController
                 ]),
                 function ($q) use ($request) {
                     $monthInput = $request->input('month');
-                    logger("calculate months");
                     if ($monthInput && str_contains((string) $monthInput, '-')) {
                         $date = Carbon::createFromFormat('Y-m', $monthInput)->startOfMonth();
                     } else {
+                        $cutoff = config('app.billing_cutoff', 26);
+                        $now = Carbon::now();
+                        if ($now->day >= $cutoff) {
+                            $now->addMonth();
+                        }
                         $date = Carbon::create(
-                            $request->input('year', now()->year),
-                            $monthInput ?? Carbon::now()->month,
+                            $request->input('year', $now->year),
+                            $monthInput ?? $now->month,
                             1
                         );
                     }

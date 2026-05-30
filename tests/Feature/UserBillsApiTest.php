@@ -57,7 +57,7 @@ class UserBillsApiTest extends TestCase
 
         $response->assertJsonFragment([
             'title' => 'Travel Batch',
-            'approved_amount' => '$ 300',
+            'approved_amount' => '$ 300.00',
         ]);
 
         $response->assertJsonFragment([
@@ -101,7 +101,7 @@ class UserBillsApiTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.category', 'Travel');
+            ->assertJsonPath('data.0.category.en', 'Travel');
     }
 
     public function test_user_can_filter_bills_by_month_billing_cycle(): void
@@ -204,15 +204,15 @@ class UserBillsApiTest extends TestCase
             'status' => BillStatus::PENDING,
         ]);
 
-        $response = $this->actingAs($user)->getJson("/api/user/{$user->id}/dashboard");
+        $response = $this->actingAs($user)->getJson("/api/employee/{$user->id}/dashboard");
 
         $response->assertStatus(200)
-            ->assertJsonPath('total_bills', 2)
-            ->assertJsonPath('current_month_verified_bills', 1)
-            ->assertJsonCount(2, 'category_wise_amounts');
+            ->assertJsonPath('data.total_bills', 2)
+            ->assertJsonPath('data.current_month_verified_bills', 1)
+            ->assertJsonCount(2, 'data.category_wise_amounts');
 
-        $response->assertJsonFragment(['category' => 'Travel', 'bill_count' => 1]);
-        $response->assertJsonFragment(['category' => 'Food', 'bill_count' => 1]);
+        $response->assertJsonFragment(['category' => ['en' => 'Travel', 'jp' => ''], 'bill_count' => 1]);
+        $response->assertJsonFragment(['category' => ['en' => 'Food', 'jp' => ''], 'bill_count' => 1]);
 
         Carbon::setTestNow();
     }

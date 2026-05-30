@@ -30,7 +30,7 @@ class BillFactory extends Factory
                 return $attributes['amount'];
             },
             'status' => BillStatus::PENDING,
-            'raw_text' => fake()->paragraph(),
+            'raw_data' => fake()->paragraph(),
             'category_monthly_pivot_id' => null,
         ];
     }
