@@ -53,6 +53,7 @@ class AdminBillService
         int $year,
         ?Carbon $startDate = null,
         ?Carbon $endDate = null,
+        ?string $status = null,
     ): Collection {
         if ($startDate === null || $endDate === null) {
             $date = Carbon::create($year, $month, 1);
@@ -60,13 +61,13 @@ class AdminBillService
             $endDate = $date->copy()->day(25)->endOfDay();
         }
 
-        $validStatuses = BillStatus::adminBillStatuses();
+        $validStatuses = $status? [$status]:BillStatus::adminBillStatuses();
+        logger($status,$validStatuses);
         $statusList = implode("','", $validStatuses);
 
         return DB::table('bill')
             ->where('bill.user_id', $userId)
             ->whereIn('bill.status', $validStatuses)
-//            ->whereBetween('bill.created_at', [$startDate, $endDate])
             ->join('category', 'category.id', '=', 'bill.category_id')
             ->leftJoin('bill_upload_batch as batch', function ($join) use ($userId, $startDate, $endDate) {
                 $join->on('batch.id', '=', DB::raw(

@@ -41,32 +41,49 @@ class UserController extends ApiController
         return $this->sendResponse((new UserResource($user))->resolve(), 'success');
     }
 
-    public function employeeDashboard($id)
+    public function employeeDashboard(Request $request, $id)
     {
         $user = User::find($id);
         if (! $user) {
             return $this->sendError('User not found', 404);
         }
 
-        // Resolve the current billing cycle month_year using the same logic as BillUploadBatchService
-        $now = Carbon::now();
-        $cutoff = config('app.billing_cutoff', 26);
-        $billingMonth = $now->copy();
-        if ($billingMonth->day >= $cutoff) {
-            $billingMonth->addMonth();
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate   = Carbon::parse($request->input('end_date'))->endOfDay();
+
+            $billQuery = Bill::where('user_id', $user->id)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereNotIn('status', [BillStatus::FAILED, BillStatus::INVALID]);
+
+            $categoryFilter = fn ($q) => $q
+                ->where('bill.user_id', $user->id)
+                ->whereBetween('bill.created_at', [$startDate, $endDate])
+                ->where('batch.ai_processing', AiProcessStatus::SUCCESS->value);
+        } else {
+            $now = Carbon::now();
+            $cutoff = config('app.billing_cutoff', 26);
+            $billingMonth = $now->copy();
+            if ($billingMonth->day >= $cutoff) {
+                $billingMonth->addMonth();
+            }
+            $monthYear = $billingMonth->format('Y-m');
+
+            $pivotIds = CategoryMonthlyPivot::where('user_id', $user->id)
+                ->where('month_year', $monthYear)
+                ->pluck('id');
+
+            $billQuery = Bill::where('user_id', $user->id)
+                ->whereIn('category_monthly_pivot_id', $pivotIds)
+                ->whereNotIn('status', [BillStatus::FAILED, BillStatus::INVALID]);
+
+            $categoryFilter = fn ($q) => $q
+                ->where('bill.user_id', $user->id)
+                ->whereIn('bill.category_monthly_pivot_id', $pivotIds)
+                ->where('batch.ai_processing', AiProcessStatus::SUCCESS->value);
         }
-        $monthYear = $billingMonth->format('Y-m');
 
-        // Fetch all pivot IDs for this user in the current billing cycle.
-        // Bills are scoped to these pivots — no date range join needed.
-        $pivotIds = CategoryMonthlyPivot::where('user_id', $user->id)
-            ->where('month_year', $monthYear)
-            ->pluck('id');
-
-        // Primary stats — scoped by pivot IDs, no batch join required
-        $stats = Bill::where('user_id', $user->id)
-            ->whereIn('category_monthly_pivot_id', $pivotIds)
-            ->whereNotIn('status', [BillStatus::FAILED, BillStatus::INVALID])
+        $stats = $billQuery
             ->selectRaw('
                 COUNT(id)                                                          AS total_bills,
                 SUM(approve_amount)                                                AS total_approved_amount,
@@ -80,13 +97,10 @@ class UserController extends ApiController
             ->latest()
             ->value('currency') ?? 'NPR';
 
-        // Category-wise amounts — scoped by pivot IDs
         $categoryWiseAmounts = Category::query()
             ->join('bill as bill', 'category.id', '=', 'bill.category_id')
             ->join('bill_upload_batch as batch', 'bill.bill_upload_batch_id', '=', 'batch.id')
-            ->where('bill.user_id', $user->id)
-            ->where('batch.ai_processing', AiProcessStatus::SUCCESS->value)
-            ->whereIn('bill.category_monthly_pivot_id', $pivotIds)
+            ->where($categoryFilter)
             ->select([
                 'category.id as category_id',
                 'category.name as category_en',

@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\BillStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class UserCategoryBillsRequest extends FormRequest
 {
@@ -14,6 +16,7 @@ class UserCategoryBillsRequest extends FormRequest
             'year' => ['sometimes', 'integer', 'min:2000', 'max:2100'],
             'start_date' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'end_date' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'status' => [Rule::in(BillStatus::adminBillStatuses())],
         ];
     }
 
@@ -37,5 +40,10 @@ class UserCategoryBillsRequest extends FormRequest
     {
         $value = $this->input('end_date');
         return $value ? Carbon::parse($value)->endOfDay() : null;
+    }
+
+    public function status(): ?string
+    {
+        return $this->input('status');
     }
 }

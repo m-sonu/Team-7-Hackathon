@@ -75,10 +75,10 @@ class VerifyBillController extends ApiController
      */
     public function bulkReimburse(BillUploadBatchService $service): JsonResponse
     {
-        $categoryMonthlyIds = CategoryMonthlyPivot::query()->where('month_year', Carbon::now()->format('Y-m'))->pluck('id');
+        $categoryMonthlyIds = CategoryMonthlyPivot::query()->where('month_year', Carbon::now()->addMonth()->format('Y-m'))->pluck('id');
 
         if ($categoryMonthlyIds->isEmpty()) {
-            return $this->sendError('Action only allowed for the current billing month.', Response::HTTP_FORBIDDEN);
+            return $this->sendError('action_only_allowed_for_the_current_billing_month.', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $billsExits = Bill::query()->whereIn('category_monthly_pivot_id', $categoryMonthlyIds->toArray())->where('status', BillStatus::VERIFIED->value);

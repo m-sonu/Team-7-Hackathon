@@ -86,6 +86,7 @@ class CategoryController extends ApiController
             year: $request->year(),
             startDate: $request->startDate(),
             endDate: $request->endDate(),
+            status: $request->status(),
         );
 
         return $this->sendResponse([
